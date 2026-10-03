@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
     ticks: true,
     mono: false,
     visualAids: true,
+    storyVoice: 'grabada',    // grabada: narradores generados · sistema: voz del navegador
 };
 
 const Storage = {

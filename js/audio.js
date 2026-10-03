@@ -420,7 +420,7 @@ const DIR_PITCH = { up: 1.18, down: 0.84, left: 1, right: 1, center: 1 };
 class AudioEngine {
     ctx = null; kit = null;
     #settings;
-    #master; #comp; #sfx; #ui; #musicBus; #musicFilter; #musicDuck;
+    #master; #comp; #sfx; #ui; #musicBus; #musicFilter; #musicDuck; #voice;
     #reverb; #reverbOut; #reverbType = null; #irs = {};
     #heartIv = null;
 
@@ -444,6 +444,7 @@ class AudioEngine {
         this.#master.connect(this.#comp); this.#comp.connect(c.destination);
         this.#sfx = c.createGain(); this.#sfx.connect(this.#master);
         this.#ui = c.createGain(); this.#ui.connect(this.#master);
+        this.#voice = c.createGain(); this.#voice.connect(this.#master);   // narración grabada
         this.#musicBus = c.createGain();
         this.#musicFilter = c.createBiquadFilter(); this.#musicFilter.type = 'lowpass'; this.#musicFilter.frequency.value = 18000;
         this.#musicDuck = c.createGain();
@@ -461,9 +462,30 @@ class AudioEngine {
         if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => { });
     }
 
+    /** Bus de la narración grabada (volumen = volumen de voz). */
+    get voiceBus() { return this.#voice; }
+
+    /** Reverberación independiente (para efectos de voz). */
+    makeReverb(type, seconds = 2.4, decay = 2.6) {
+        const key = `${type}:${seconds}:${decay}`;
+        if (!this.#irs[key]) this.#irs[key] = this.#makeIR(seconds, decay);
+        const cv = this.ctx.createConvolver();
+        cv.buffer = this.#irs[key];
+        return cv;
+    }
+
+    /** Baja la música mientras habla un narrador grabado. */
+    setVoiceDuck(on) {
+        if (!this.ctx) return;
+        const g = this.#musicDuck.gain, t = this.ctx.currentTime;
+        try { g.cancelScheduledValues(t); } catch (_) { /* nada */ }
+        g.setTargetAtTime(on ? 0.3 : 1, t, on ? 0.15 : 0.6);
+    }
+
     applySettings() {
         if (!this.ctx) return;
         const s = this.#settings, t = this.ctx.currentTime;
+        this.#voice.gain.setTargetAtTime(clamp(s.speechVolume, 0, 1) * 0.85, t, 0.05);
         this.#sfx.gain.setTargetAtTime(s.sfxVolume, t, 0.05);
         this.#ui.gain.setTargetAtTime(Math.min(1, s.sfxVolume * 0.85 + 0.1), t, 0.05);
         this.#musicBus.gain.setTargetAtTime(Math.pow(s.musicVolume, 1.5) * 0.6, t, 0.1);

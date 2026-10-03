@@ -92,6 +92,7 @@ const MECHANICS = {
         phases: [{
             at: 0.5, react: 0.85,
             text: enc => enc.endless ? '¡Ignar entra en furia! Su forja arde más que nunca.' : LORE.bosses.fire.rage,
+            key: enc => (enc.endless ? null : 'route_fire_rage'),
         }],
         afterTurn(api, inst) {
             const st = inst.st;
@@ -109,6 +110,7 @@ const MECHANICS = {
         phases: [{
             at: 0.5, react: 0.85,
             text: enc => enc.endless ? '¡El Leviatán entra en furia! La corriente se vuelve salvaje.' : LORE.bosses.water.rage,
+            key: enc => (enc.endless ? null : 'route_water_rage'),
         }],
         prepare(api, inst, turn) {
             const others = shuffle(DIR_IDS.filter(d => d !== turn.dir));
@@ -123,6 +125,7 @@ const MECHANICS = {
         phases: [{
             at: 0.5, react: 0.9,
             text: enc => enc.endless ? '¡Zael entra en furia! Sus ecos se multiplican.' : LORE.bosses.wind.rage,
+            key: enc => (enc.endless ? null : 'route_wind_rage'),
         }],
         prepare(api, inst, turn) {
             const others = shuffle(DIR_IDS.filter(d => d !== turn.dir));
@@ -137,6 +140,7 @@ const MECHANICS = {
         phases: [{
             at: 0.5, react: 0.9,
             text: enc => enc.endless ? '¡Rok entra en furia! La montaña entera tiembla.' : LORE.bosses.earth.rage,
+            key: enc => (enc.endless ? null : 'route_earth_rage'),
         }],
         prepare(api, inst, turn) {
             const p = inst.st.phase >= 2 ? 0.4 : 0.3;
@@ -161,8 +165,8 @@ const MECHANICS = {
 
     shift: {
         phases: [
-            { at: 0.65, react: 0.95, pitch: 0.55, text: () => LORE_EXTRA.avatarPhases[2] },
-            { at: 0.3, react: 0.85, pitch: 0.5, text: () => LORE_EXTRA.avatarPhases[3] },
+            { at: 0.65, react: 0.95, pitch: 0.55, text: () => LORE_EXTRA.avatarPhases[2], key: () => 'avatar_phase_2' },
+            { at: 0.3, react: 0.85, pitch: 0.5, text: () => LORE_EXTRA.avatarPhases[3], key: () => 'avatar_phase_3' },
         ],
         async prepare(api, inst, turn) {
             const st = inst.st;
@@ -749,7 +753,7 @@ class CombatEngine {
                 this.#state = 'narrating';
                 await this.#sleep(900);
                 if (gen !== this.#gen) return;
-                await this.#d.narrate([text], { pitch: ph.pitch ?? 0.7, title: inst.def.name });
+                await this.#d.narrate([text], { pitch: ph.pitch ?? 0.7, title: inst.def.name, key: ph.key?.(this.#enc) || null });
                 if (!(await this.#checkpoint(gen))) return;
                 this.#state = prev;
             }

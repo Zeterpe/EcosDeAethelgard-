@@ -13,7 +13,7 @@ const $ = id => document.getElementById(id);
 // ═══════════════════════════════════════════════════════
 
 const UI = {
-    speech: null, audio: null, settings: null,
+    speech: null, audio: null, settings: null, narrator: null,
     screens: {},
     current: 'splash',
     backHandlers: {},
@@ -22,8 +22,8 @@ const UI = {
     _captionT: null,
     _toastT: null,
 
-    init({ speech, audio, settings }) {
-        this.speech = speech; this.audio = audio; this.settings = settings;
+    init({ speech, audio, settings, narrator = null }) {
+        this.speech = speech; this.audio = audio; this.settings = settings; this.narrator = narrator;
         document.querySelectorAll('.screen').forEach(el => { this.screens[el.id.replace('screen-', '')] = el; });
         document.addEventListener('focusin', e => this._onFocus(e));
         speech.onCaption = text => this.caption(text);
@@ -279,7 +279,10 @@ const Narration = {
     active: false,
     _prevFocus: null,
 
-    async run(paragraphs, { title = '', pitch = 1, gap = 450 } = {}) {
+    _recorded: false,
+
+    /** key: sección de la historia con narración grabada (si existe). */
+    async run(paragraphs, { title = '', pitch = 1, gap = 450, key = null } = {}) {
         if (!paragraphs || !paragraphs.length) return true;
         this.active = true;
         this._prevFocus = document.activeElement;
@@ -289,15 +292,25 @@ const Narration = {
         $('narration').hidden = false;
         UI.focus($('narration-text'), { silent: true });
         let ok;
+        const onParagraph = (p, i, n) => {
+            $('narration-text').textContent = p;
+            $('narration-progress').textContent = n > 1 ? `${i + 1} de ${n}` : '';
+        };
+        const plan = UI.narrator ? UI.narrator.plan(key, paragraphs) : null;
+        this._recorded = !!plan;
         try {
-            ok = await UI.speech.narrate(paragraphs, {
-                pitch, gap,
-                onParagraph: (p, i, n) => {
-                    $('narration-text').textContent = p;
-                    $('narration-progress').textContent = n > 1 ? `${i + 1} de ${n}` : '';
-                },
-            });
+            if (plan) {
+                UI.speech.cancel();
+                ok = await UI.narrator.play(paragraphs, plan, {
+                    gap: gap + 150, onParagraph,
+                    tts: p => UI.speech.say(p, { pitch }),
+                    cancelTts: () => UI.speech.cancel(),
+                });
+            } else {
+                ok = await UI.speech.narrate(paragraphs, { pitch, gap, onParagraph });
+            }
         } finally {
+            this._recorded = false;
             this.active = false;
             $('narration').hidden = true;
             const prev = this._prevFocus;
@@ -307,8 +320,14 @@ const Narration = {
     },
 
     onKey(e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!e.repeat) { UI.audio.uiMove(); UI.speech.skipParagraph(); } }
-        else if (e.key === 'Escape') { e.preventDefault(); UI.audio.uiBack(); UI.speech.skipNarration(); }
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (!e.repeat) { UI.audio.uiMove(); if (this._recorded) UI.narrator.skipParagraph(); else UI.speech.skipParagraph(); }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            UI.audio.uiBack();
+            if (this._recorded) UI.narrator.skipAll(); else UI.speech.skipNarration();
+        }
         return true;
     },
 };

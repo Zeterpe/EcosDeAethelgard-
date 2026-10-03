@@ -13,6 +13,7 @@ const App = (() => {
     const audio = new AudioEngine(settings);
     const music = new MusicEngine(audio);
     const input = new InputSystem(settings);
+    const narrator = new Narrator(audio, settings);
 
     let profile = null;
     let mode = 'guest';         // guest: solo este navegador · cloud: cuenta online
@@ -511,17 +512,17 @@ const App = (() => {
             profile.echosSeen.push(echoKey);
             if (n === 1) profile.introSeen = true;
             save();
-            await Narration.run(LORE.echos[echoKey], { title: LORE_EXTRA.echoTitles[echoKey], pitch: echoKey.includes('shadow') ? 0.5 : 1, gap: 600 });
+            await Narration.run(LORE.echos[echoKey], { title: LORE_EXTRA.echoTitles[echoKey], pitch: echoKey.includes('shadow') ? 0.5 : 1, gap: 600, key: `echo_${echoKey}` });
             if (!alive()) return;
         }
         if (LORE_EXTRA.acts[n] && !profile.loreSeen.includes(`act${n}`)) {
             profile.loreSeen.push(`act${n}`); save();
-            await Narration.run(LORE_EXTRA.acts[n], { title: act.name });
+            await Narration.run(LORE_EXTRA.acts[n], { title: act.name, key: `act_${n}` });
             if (!alive()) return;
         }
         if (def.miniboss && !profile.loreSeen.includes(`shadow${n}`)) {
             profile.loreSeen.push(`shadow${n}`); save();
-            await Narration.run(LORE_EXTRA.shadow[n], { title: 'Sombra Imitadora' });
+            await Narration.run(LORE_EXTRA.shadow[n], { title: 'Sombra Imitadora', key: `shadow_${n}` });
             if (!alive()) return;
         }
         if (!await introduceEnemies(def.pool.filter(id => !profile.met.includes(id)), alive)) return;
@@ -554,7 +555,7 @@ const App = (() => {
             await Dialog.open({ title: `Nivel ${n} superado`, text: resultLines(result), buttons: [{ label: 'Continuar', value: 'ok' }], cancel: 'ok' });
             if (!alive()) return;
             if (!profile.echosSeen.includes('30')) { profile.echosSeen.push('30'); save(); }
-            await Narration.run(LORE.echos[30], { title: LORE_EXTRA.echoTitles['30'], gap: 600 });
+            await Narration.run(LORE.echos[30], { title: LORE_EXTRA.echoTitles['30'], gap: 600, key: 'echo_30' });
             if (!alive()) return;
             showRouteSelect();
             return;
@@ -655,7 +656,7 @@ const App = (() => {
             showCombat(R.place, `Ruta de ${R.name}`);
             music.play(R.theme, { intensity: 1 });
             audio.setReverb(R.reverb);
-            await Narration.run(LORE.bosses[r].preRoute, { title: R.place, gap: 600 });
+            await Narration.run(LORE.bosses[r].preRoute, { title: R.place, gap: 600, key: `route_${r}_pre` });
             if (!alive()) return;
         }
         const lvl = st.routeProgress[r];
@@ -710,7 +711,7 @@ const App = (() => {
         music.play(R.theme, { intensity: 1 });
         audio.setReverb(R.reverb);
         if (!profile.met.includes(def.id)) { profile.met.push(def.id); save(); }
-        await Narration.run(LORE_EXTRA.bossMechanics[r], { title: def.name });
+        await Narration.run(LORE_EXTRA.bossMechanics[r], { title: def.name, key: `mech_${r}` });
         if (!alive()) return;
         audio.playVoice(def.voice, 'center');
         await sleep(2200);
@@ -723,7 +724,7 @@ const App = (() => {
         applyResult(result, 'story');
         if (result.outcome === 'quit') { goMenu(); return; }
         if (result.outcome === 'defeat') { afterDefeat(() => playGuardian(r), def.name); return; }
-        await Narration.run(LORE.bosses[r].victory, { title: 'Purificación', gap: 700 });
+        await Narration.run(LORE.bosses[r].victory, { title: 'Purificación', gap: 700, key: `route_${r}_victory` });
         if (!alive()) return;
         const st = profile.story;
         if (!st.routesDone.includes(r)) st.routesDone.push(r);
@@ -735,7 +736,7 @@ const App = (() => {
         save();
         const allDone = ROUTE_IDS.every(x => st.routesDone.includes(x));
         if (allDone && !st.finalDone) {
-            await Narration.run(LORE_EXTRA.allRoutesDone, { title: 'El centro' });
+            await Narration.run(LORE_EXTRA.allRoutesDone, { title: 'El centro', key: 'all_routes' });
             if (!alive()) return;
         }
         const left = ROUTE_IDS.filter(x => !st.routesDone.includes(x)).length;
@@ -755,9 +756,9 @@ const App = (() => {
         music.play('final', { intensity: 1 });
         audio.setReverb('cave');
         if (!profile.met.includes('final_boss')) { profile.met.push('final_boss'); save(); }
-        await Narration.run(LORE.finalBoss.intro, { title: 'Avatar del Silencio', pitch: 0.6, gap: 700 });
+        await Narration.run(LORE.finalBoss.intro, { title: 'Avatar del Silencio', pitch: 0.6, gap: 700, key: 'final_intro' });
         if (!alive()) return;
-        await Narration.run(LORE_EXTRA.bossMechanics.final, { title: 'Advertencia' });
+        await Narration.run(LORE_EXTRA.bossMechanics.final, { title: 'Advertencia', key: 'mech_final' });
         if (!alive()) return;
         const result = await runEncounter({
             kind: 'final', bossFight: true, title: 'Avatar del Silencio', theme: 'final', reverb: 'cave', reactionMs: 2900,
@@ -767,7 +768,7 @@ const App = (() => {
         applyResult(result, 'story');
         if (result.outcome === 'quit') { goMenu(); return; }
         if (result.outcome === 'defeat') { afterDefeat(() => playFinal(), 'Avatar del Silencio'); return; }
-        await Narration.run(LORE.finalBoss.victory, { title: 'Ecos Eternos', gap: 800 });
+        await Narration.run(LORE.finalBoss.victory, { title: 'Ecos Eternos', gap: 800, key: 'final_victory' });
         if (!alive()) return;
         profile.story.finalDone = true;
         profile.story.defeatsInRow = 0;
@@ -776,7 +777,7 @@ const App = (() => {
         unlockAch('final_boss');
         if (settings.difficulty === 'archimago') unlockAch('archimago');
         save();
-        await Narration.run(LORE_EXTRA.credits, { title: 'Fin' });
+        await Narration.run(LORE_EXTRA.credits, { title: 'Fin', key: 'credits' });
         if (!alive()) return;
         await Dialog.open({
             title: '¡Has derrotado al Avatar del Silencio!', text: resultLines(result),
@@ -950,7 +951,7 @@ const App = (() => {
             items: [
                 { label: 'Bestiario', sub: `${known} de ${BESTIARY_ORDER.length} criaturas encontradas`, icon: '📖', action: () => openBestiary() },
                 { label: 'Grimorio de hechizos', sub: 'Los cuatro elementos y los seis dúos', icon: '✨', action: () => openGrimoire() },
-                { label: 'El ciclo elemental', sub: 'Quién vence a quién', icon: '🔄', action: () => Narration.run(LORE_EXTRA.cycle, { title: 'El ciclo elemental' }) },
+                { label: 'El ciclo elemental', sub: 'Quién vence a quién', icon: '🔄', action: () => Narration.run(LORE_EXTRA.cycle, { title: 'El ciclo elemental', key: 'cycle' }) },
                 { label: 'Sonidos de posición', sub: 'Escucha cómo suena cada dirección', icon: '🎧', action: () => openDirections() },
                 { label: 'Archivo de ecos', sub: 'Vuelve a escuchar la historia', icon: '📜', action: () => openArchive() },
             ],
@@ -1065,16 +1066,16 @@ const App = (() => {
         const echoOrder = ['1', '10', '15_shadow', '20', '25_shadow', '30'];
         echoOrder.filter(k => profile.echosSeen.includes(k)).forEach(k => items.push({
             label: LORE_EXTRA.echoTitles[k], sub: 'Eco', icon: k.includes('shadow') ? '🌑' : '📜',
-            action: () => Narration.run(LORE.echos[k], { title: LORE_EXTRA.echoTitles[k], pitch: k.includes('shadow') ? 0.5 : 1 }),
+            action: () => Narration.run(LORE.echos[k], { title: LORE_EXTRA.echoTitles[k], pitch: k.includes('shadow') ? 0.5 : 1, key: `echo_${k}` }),
         }));
         ROUTE_IDS.forEach(r => {
             const R = ROUTES[r];
-            if (profile.loreSeen.includes(`pre_${r}`)) items.push({ label: R.place, sub: `La historia de ${R.guardian}`, icon: R.icon, action: () => Narration.run(LORE.bosses[r].preRoute, { title: R.place }) });
-            if (profile.story.routesDone.includes(r)) items.push({ label: `Purificación: ${ENEMIES[R.boss].name}`, sub: 'Victoria', icon: '🕊️', action: () => Narration.run(LORE.bosses[r].victory, { title: 'Purificación' }) });
+            if (profile.loreSeen.includes(`pre_${r}`)) items.push({ label: R.place, sub: `La historia de ${R.guardian}`, icon: R.icon, action: () => Narration.run(LORE.bosses[r].preRoute, { title: R.place, key: `route_${r}_pre` }) });
+            if (profile.story.routesDone.includes(r)) items.push({ label: `Purificación: ${ENEMIES[R.boss].name}`, sub: 'Victoria', icon: '🕊️', action: () => Narration.run(LORE.bosses[r].victory, { title: 'Purificación', key: `route_${r}_victory` }) });
         });
         if (profile.story.finalDone) {
-            items.push({ label: 'El Avatar del Silencio', sub: 'El encuentro final', icon: '👁️', action: () => Narration.run(LORE.finalBoss.intro, { title: 'Avatar del Silencio', pitch: 0.6 }) });
-            items.push({ label: 'Ecos Eternos', sub: 'El final', icon: '✨', action: () => Narration.run(LORE.finalBoss.victory, { title: 'Ecos Eternos' }) });
+            items.push({ label: 'El Avatar del Silencio', sub: 'El encuentro final', icon: '👁️', action: () => Narration.run(LORE.finalBoss.intro, { title: 'Avatar del Silencio', pitch: 0.6, key: 'final_intro' }) });
+            items.push({ label: 'Ecos Eternos', sub: 'El final', icon: '✨', action: () => Narration.run(LORE.finalBoss.victory, { title: 'Ecos Eternos', key: 'final_victory' }) });
         }
         ListScreen.open({
             title: 'Archivo de ecos', intro: items.length ? `Archivo de ecos. ${plural(items.length, 'grabación', 'grabaciones')}.` : 'Archivo de ecos. Aún no has escuchado ningún eco.',
@@ -1201,7 +1202,7 @@ const App = (() => {
             { t: 'Niveles especiales', x: 'Frenesí: los enemigos llegan más rápido. Niebla: no se anuncia la posición, solo la oyes. Élite: solo criaturas de dos elementos. En los niveles 15 y 25 acecha la Sombra Imitadora: imita a otras criaturas y debes responderle como a la criatura que imita.' },
             { t: 'Guardianes', x: 'Cada guardián tiene una mecánica propia. Ignar lanza brasas: apágalas con Agua. El Leviatán se desplaza antes de atacar: apunta a donde termina. Zael lanza ecos falsos y lejanos: apunta al grito cercano. Rok alza un escudo de piedra: cuando lo oigas, no ataques. El Avatar del Silencio cambia de elemento sin parar.' },
             { t: 'Modos de juego', x: 'Historia: treinta niveles, cuatro rutas con sus guardianes y un enemigo final. Arena: oleadas infinitas con récord. Práctica libre: sin vidas ni puntos. Entrenamiento: aprende paso a paso.' },
-            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono y si usas lector de pantalla. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
+            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
         ];
     }
 
@@ -1260,6 +1261,13 @@ const App = (() => {
                 id: 'output', label: 'Salida de voz', type: 'choice', values: ['tts', 'sr'], labels: { tts: 'Voz del juego', sr: 'Lector de pantalla' },
                 desc: v => v === 'tts' ? 'El juego habla con su propia voz.' : 'Los anuncios se envían a tu lector de pantalla.',
             },
+            {
+                id: 'storyVoice', label: 'Voz de la historia', type: 'choice', values: ['grabada', 'sistema'],
+                labels: { grabada: 'Narradores grabados', sistema: 'Voz del sistema' },
+                desc: v => v === 'grabada'
+                    ? (narrator.available ? 'Cada personaje tiene su propia voz y sus efectos.' : 'Aún no se han generado los audios: mientras tanto se usa la voz del sistema.')
+                    : 'La historia la lee la misma voz que el resto del juego.',
+            },
             { id: 'test', label: 'Probar sonido y voz', type: 'action', run: () => testSound() },
             { id: 'reset', label: 'Borrar el progreso de este invocador', type: 'action', danger: true, run: () => confirmReset() },
         ];
@@ -1303,7 +1311,8 @@ const App = (() => {
     // ═══════════════════════════════════════════════════
 
     function init() {
-        UI.init({ speech, audio, settings });
+        UI.init({ speech, audio, settings, narrator });
+        narrator.load();
         document.body.classList.toggle('no-visual', !settings.visualAids);
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', e => { if (UI.current === 'combat') input.keyup(e); });
@@ -1353,7 +1362,7 @@ const App = (() => {
         init,
         // Acceso para depuración y pruebas automáticas.
         debug: {
-            settings, speech, audio, music, input, combat, tutorial,
+            settings, speech, audio, music, input, combat, tutorial, narrator,
             get profile() { return profile; },
             get flow() { return flow; },
             get mode() { return mode; },

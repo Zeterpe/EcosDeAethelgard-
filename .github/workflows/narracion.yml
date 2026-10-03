@@ -1,0 +1,61 @@
+# Genera la narración de la historia con las voces de Azure y la guarda en el repositorio.
+# Se lanza a mano: pestaña Actions → «Generar narración» → Run workflow.
+# Necesita los secretos AZURE_SPEECH_KEY y AZURE_SPEECH_REGION (ver CONFIGURAR_VOCES.md).
+name: Generar narración
+
+on:
+  workflow_dispatch:
+    inputs:
+      regenerar_todo:
+        description: 'Regenerar todos los audios (si no, solo los textos o voces que hayan cambiado)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: narracion
+  cancel-in-progress: false
+
+jobs:
+  narracion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Descargar el juego
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Comprobar los secretos
+        env:
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+        run: |
+          if [ -z "$AZURE_SPEECH_KEY" ] || [ -z "$AZURE_SPEECH_REGION" ]; then
+            echo "::error::Faltan los secretos AZURE_SPEECH_KEY y AZURE_SPEECH_REGION. Sigue CONFIGURAR_VOCES.md."
+            exit 1
+          fi
+
+      - name: Generar las voces con Azure
+        env:
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+          FORCE: ${{ inputs.regenerar_todo && '1' || '0' }}
+        run: node tools/generar-narracion.mjs
+
+      - name: Guardar los audios en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audio/narracion
+          if git diff --cached --quiet; then
+            echo "No hay audios nuevos."
+          else
+            git commit -m "Narración de la historia generada con Azure"
+            git push
+          fi

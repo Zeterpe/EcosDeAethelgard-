@@ -35,6 +35,12 @@ Con una cuenta gratuita la partida se guarda en la nube y se compite con los ami
 
 Para activarlo hay que crear un proyecto gratuito de Firebase: sigue **[CONFIGURAR_ONLINE.md](CONFIGURAR_ONLINE.md)** paso a paso. Sin configurarlo, el juego funciona sin conexión como siempre.
 
+## Narración con voces grabadas (gratis)
+
+La historia puede sonar con voces neuronales de Microsoft Azure en lugar de la voz del navegador: un narrador grave con eco de catedral, Sylvara y Tomás como grabaciones antiguas, el Avatar con un coro inquietante y cada guardián con su propia voz (espectral cuando habla liberado y distorsionada cuando grita de furia). Los audios se generan una vez con el plan gratuito de Azure y se guardan en el repositorio; los jugadores no necesitan nada. Si un párrafo no tiene audio (o su texto ha cambiado), se lee con la voz del sistema. Cada jugador puede elegir en **Opciones → Voz de la historia**.
+
+Para generarlos: **[CONFIGURAR_VOCES.md](CONFIGURAR_VOCES.md)** (crear el recurso gratuito, dos secretos en GitHub y pulsar un botón en Actions).
+
 ## Modos
 
 - **Historia**: 30 niveles en tres actos, con ecos narrados, presentación de cada criatura nueva, niveles especiales (Frenesí, Niebla, Élite) y la Sombra Imitadora en los niveles 15 y 25. Después, cuatro rutas con su guardián y el combate final contra el Avatar del Silencio. Si caes, repites el nivel: nunca pierdes el progreso.
@@ -62,7 +68,7 @@ Cada jefe tiene su propia voz y una mecánica única:
 
 ## Técnica
 
-Sin dependencias ni archivos de audio: todo el sonido (voces de criaturas, efectos y música generativa por zona) se sintetiza con la Web Audio API. Basta con abrir `index.html` en un navegador moderno (o servir la carpeta con cualquier servidor estático). Sin cuenta, el progreso se guarda en `localStorage` (y las partidas de la versión anterior se migran automáticamente). Con cuenta, se guarda en Firebase (plan gratuito Spark); las reglas de seguridad están en `firebase/firestore.rules`.
+Sin dependencias: todo el sonido del juego (voces de criaturas, efectos y música generativa por zona) se sintetiza con la Web Audio API; los únicos archivos de audio son, si se generan, los de la narración (`audio/narracion/`), a los que se aplican efectos en tiempo real. Basta con abrir `index.html` en un navegador moderno (o servir la carpeta con cualquier servidor estático). Sin cuenta, el progreso se guarda en `localStorage` (y las partidas de la versión anterior se migran automáticamente). Con cuenta, se guarda en Firebase (plan gratuito Spark); las reglas de seguridad están en `firebase/firestore.rules`.
 
 ```
 index.html     Pantallas y capas
@@ -73,6 +79,7 @@ js/storage.js  Perfiles, ajustes y migración
 js/speech.js   Voz (síntesis o lector de pantalla)
 js/audio.js    Motor de sonido y voces de las criaturas
 js/music.js    Música generativa
+js/narrator.js Narración grabada y efectos por personaje
 js/input.js    Teclado y combinaciones
 js/combat.js   Motor de combate y mecánicas de jefes
 js/tutorial.js Entrenamiento
@@ -82,4 +89,6 @@ js/cloud.js    Servicio online: cuentas, guardado, duelos, diario, panel
 js/online.js   Pantallas online: cuenta, comunidad, duelos, privacidad, panel
 js/app.js      Flujo del juego
 firebase/      Reglas de seguridad de Firestore
+tools/         Generador de la narración (Azure)
+audio/         Audios de la narración y su manifiesto
 ```
