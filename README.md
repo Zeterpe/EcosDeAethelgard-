@@ -14,6 +14,7 @@ Las criaturas del Silencio te atacan desde cuatro posiciones. Escucha su sonido,
 | **Espacio** | Repetir el enemigo actual |
 | **Enter** | Estado: vidas, puntos, racha, enemigos restantes |
 | **H** | Pista sobre la debilidad del enemigo |
+| **V** | Apagar o encender los anuncios de enemigos (solo sonido) |
 | **Escape** | Pausa (y saltar narraciones) |
 
 Pulsa el elemento y, enseguida, la flecha. El elemento queda «cargado» durante la ventana de combinación, así que puedes mantenerlo o soltarlo justo antes. Hay un esquema para zurdos (J K L Ñ + W A S D) y botones táctiles en pantalla.
@@ -43,7 +44,7 @@ Para generarlos: **[CONFIGURAR_VOCES.md](CONFIGURAR_VOCES.md)** (crear el recurs
 
 ## Modos
 
-- **Historia**: 30 niveles en tres actos, con ecos narrados, presentación de cada criatura nueva, niveles especiales (Frenesí, Niebla, Élite) y la Sombra Imitadora en los niveles 15 y 25. Después, cuatro rutas con su guardián y el combate final contra el Avatar del Silencio. Si caes, repites el nivel: nunca pierdes el progreso.
+- **Historia**: 30 niveles en tres actos, con ecos narrados, las **Crónicas de los Antiguos Ecos** (una página cada cinco niveles que va desvelando cómo se quebró el Gran Eco), la historia de cada criatura nueva y de por qué se corrompió, niveles especiales (Frenesí, Niebla, Élite) y la Sombra Imitadora en los niveles 15 y 25. Después, cuatro rutas con su guardián y el combate final contra el Avatar del Silencio. Si caes, repites el nivel: nunca pierdes el progreso.
 - **Entrenamiento**: tutorial interactivo (auriculares, direcciones, elementos, ciclo, hechizos, dúos y controles).
 - **Arena de los Ecos**: oleadas infinitas, un guardián cada cinco oleadas, récord y clasificación.
 - **Práctica libre**: sin vidas ni puntos; cada error se explica.
@@ -52,6 +53,8 @@ Para generarlos: **[CONFIGURAR_VOCES.md](CONFIGURAR_VOCES.md)** (crear el recurs
 ## Guardianes
 
 Cada jefe tiene su propia voz y una mecánica única:
+
+Cada ruta guarda además una leyenda de su guardián y una escena antes del combate que explican quién era y por qué es así.
 
 - **Ignar, Señor de las Cenizas**: golpea el yunque y lanza brasas.
 - **Leviatán Abisal**: se desplaza antes de atacar; apunta a donde termina el movimiento.

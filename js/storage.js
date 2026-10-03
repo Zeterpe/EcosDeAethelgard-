@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
     sfxVolume: 0.8,
     difficulty: 'invocador',
     verbosity: 'normal',      // completo · normal · breve · sonido
+    verbosityPrev: 'normal',  // a qué volver al reactivar los anuncios con la tecla V
     comboWindow: 1000,
     keyScheme: 'clasico',
     ticks: true,

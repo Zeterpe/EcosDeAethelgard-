@@ -208,7 +208,7 @@ const Dialog = {
                 if (b.desc) btn.dataset.desc = b.desc;
                 btn.addEventListener('click', () => {
                     UI.audio.uiSelect();
-                    if (b.action) b.action();
+                    if (b.action) b.action(btn);
                     if (b.submit) { this.close(this.fieldValues()); return; }
                     if (!b.keep) this.close(b.value);
                 });

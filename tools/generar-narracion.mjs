@@ -42,6 +42,14 @@ export const REPARTO = {
     corriente_furia: { nombre: 'Leviatán (furia)', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '+2%', tono: '-8%', volumen: 'loud', pausa: 0, efecto: 'furia' },
     zael_furia: { nombre: 'Zael (furia)', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '+8%', tono: '+2%', volumen: 'loud', pausa: 0, efecto: 'furia' },
     rok_furia: { nombre: 'Rok (furia)', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-6%', tono: '-14%', volumen: 'loud', pausa: 0, efecto: 'furia' },
+    // Guardianes corrompidos antes del combate: su voz, poseída por el Silencio
+    ignar_corrupto: { nombre: 'Ignar (corrompido)', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '-10%', tono: '-14%', pausa: 450, coma: 150, efecto: 'avatar' },
+    corriente_corrupta: { nombre: 'Leviatán (corrompido)', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '-20%', tono: '-12%', pausa: 650, coma: 220, efecto: 'avatar' },
+    rok_corrupto: { nombre: 'Rok (corrompido)', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-24%', tono: '-18%', pausa: 700, coma: 250, efecto: 'avatar' },
+    // Crónicas de los Antiguos Ecos
+    aldara: { nombre: 'Maestra Aldara', voz: 'es-ES-TrianaNeural', genero: 'Female', velocidad: '-12%', tono: '-2%', pausa: 650, coma: 160, efecto: 'eco' },
+    darien: { nombre: 'Darién', voz: 'es-ES-NilNeural', genero: 'Male', velocidad: '-6%', tono: '+2%', pausa: 450, coma: 120, efecto: 'eco' },
+    darien_espiritu: { nombre: 'Darién (espíritu)', voz: 'es-ES-NilNeural', genero: 'Male', velocidad: '-14%', tono: '0%', pausa: 700, coma: 200, efecto: 'guardian' },
 };
 
 const FORMATOS = {
@@ -96,6 +104,21 @@ export function secciones({ L, X }) {
     add('all_routes', X.allRoutesDone, 'narrador');
     add('credits', X.credits, 'narrador');
     add('cycle', X.cycle, 'narrador');
+    // Crónicas de los Antiguos Ecos. citas: quién dice cada cita, en orden (la última se repite).
+    const C = L.chronicles;
+    add('chron_1', C[1], 'narrador', ['tomas']);
+    add('chron_2', C[2], 'narrador', ['tomas']);
+    add('chron_3', C[3], 'narrador', ['aldara', 'aldara', 'aldara', 'tomas']);
+    add('chron_4', C[4], 'narrador', ['tomas', 'darien', 'tomas']);
+    add('chron_5', C[5], 'narrador', ['darien_espiritu', 'tomas']);
+    add('chron_6', C[6], 'narrador', ['rok', 'zael', 'corriente', 'ignar']);
+    add('chron_epilogue', C.epilogue, 'narrador', ['darien_espiritu']);
+    for (const id of Object.keys(L.creatures)) add(`creature_${id}`, L.creatures[id], 'narrador');
+    const corrupto = { fire: 'ignar_corrupto', water: 'corriente_corrupta', wind: 'zael_furia', earth: 'rok_corrupto' };
+    for (const r of ['fire', 'water', 'wind', 'earth']) {
+        add(`route_${r}_legend`, L.bosses[r].legend, 'narrador');
+        add(`route_${r}_encounter`, L.bosses[r].encounter, 'narrador', corrupto[r]);
+    }
     return s;
 }
 
@@ -124,14 +147,15 @@ function suavizarMayusculas(t) {
 
 /** Divide cada párrafo en fragmentos de narrador y de personaje (lo que va entre comillas). */
 export function segmentar(sec) {
-    let enCita = false;
+    let enCita = false, nCita = 0;
+    const quienCita = () => (Array.isArray(sec.citas) ? sec.citas[Math.min(nCita, sec.citas.length) - 1] : sec.citas);
     return sec.parrafos.map(p => {
         const trozos = [];
         let buf = '';
         const cerrar = () => {
             const t = buf.replace(/\s+/g, ' ').trim();
             if (/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9]/.test(t)) {
-                const hablante = enCita ? sec.citas : sec.hablante;
+                const hablante = enCita ? quienCita() : sec.hablante;
                 const prev = trozos[trozos.length - 1];
                 if (prev && prev.hablante === hablante) prev.texto += ' ' + t;
                 else trozos.push({ texto: t, hablante });
@@ -139,7 +163,7 @@ export function segmentar(sec) {
             buf = '';
         };
         for (const ch of p) {
-            if (ch === '"' || ch === '«' || ch === '»') { cerrar(); enCita = !enCita; }
+            if (ch === '"' || ch === '«' || ch === '»') { cerrar(); enCita = !enCita; if (enCita) nCita++; }
             else buf += ch;
         }
         cerrar();
@@ -231,6 +255,12 @@ async function main() {
 
     const secs = secciones(cargarTextos());
     const plan = secs.map(sec => ({ sec, parrafos: segmentar(sec) }));
+    for (const { sec, parrafos } of plan) {
+        if (parrafos.some(p => typeof p.texto !== 'string')) throw new Error(`La sección ${sec.key} tiene un texto vacío o que no existe en js/lore.js.`);
+        for (const p of parrafos) for (const t of p.trozos) {
+            if (!REPARTO[t.hablante]) throw new Error(`La sección ${sec.key} usa un personaje que no está en el REPARTO: ${t.hablante}`);
+        }
+    }
     const totalCaracteres = plan.reduce((n, p) => n + p.parrafos.reduce((m, q) => m + q.trozos.reduce((k, t) => k + t.texto.length, 0), 0), 0);
     const totalTrozos = plan.reduce((n, p) => n + p.parrafos.reduce((m, q) => m + q.trozos.length, 0), 0);
 

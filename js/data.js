@@ -276,6 +276,10 @@ const CAMPAIGN = [
 
 /** Ecos que suenan al COMENZAR un nivel. El eco 30 suena al superarlo. */
 const ECHO_AT_START = { 1: '1', 10: '10', 15: '15_shadow', 20: '20', 25: '25_shadow' };
+/** Páginas de las Crónicas de los Antiguos Ecos que se encuentran al SUPERAR un nivel. */
+const CHRONICLE_AT_END = { 5: 1, 10: 2, 15: 3, 20: 4, 25: 5 };
+/** En cada ruta, la leyenda del guardián suena al superar este nivel. */
+const LEGEND_AT_ROUTE_LEVEL = 3;
 
 /** Nivel de ruta (1..5). */
 function routeLevelDef(routeId, n) {

@@ -492,11 +492,11 @@ class CombatEngine {
 
     #hintsOn() { return DIFFICULTIES[this.#d.settings.difficulty].hints || !!this.#enc?.practice; }
 
-    #dirSpoken(turn) {
+    #dirSpoken(turn, v = this.#d.settings.verbosity) {
         const s = this.#d.settings, forced = this.#forceReveal();
         if (turn.hideDir && !forced) return false;
         if (this.#enc.modifier === 'fog' && !forced) return false;
-        if (s.verbosity === 'sonido' && !s.mono) return false;
+        if (v === 'sonido' && !s.mono) return false;
         return true;
     }
 
@@ -508,15 +508,16 @@ class CombatEngine {
         return true;
     }
 
-    #announce(turn) {
-        const s = this.#d.settings, v = s.verbosity, def = turn.inst.def;
+    #announce(turn, { asked = false } = {}) {
+        const s = this.#d.settings, def = turn.inst.def;
+        const v = asked && s.verbosity === 'sonido' ? 'breve' : s.verbosity;
         let text;
         if (turn.warning) {
             text = turn.warning;
         } else {
             const p = [];
             if (v !== 'sonido') p.push(turn.label || (v === 'breve' ? def.short : def.name));
-            if (this.#dirSpoken(turn)) p.push(DIRECTIONS[turn.dir].name);
+            if (this.#dirSpoken(turn, v)) p.push(DIRECTIONS[turn.dir].name);
             const lm = turn.inst.maxLives;
             if (lm > 1 && (v === 'completo' || (v === 'normal' && lm <= 8))) p.push(plural(turn.inst.lives, 'vida', 'vidas'));
             if (v !== 'sonido' && this.#hintsOn()) p.push(this.#hintShort(turn));
@@ -571,12 +572,14 @@ class CombatEngine {
         if (this.#paused) return;
         const t = this.#turn;
         if (cmd === 'repeat') {
-            if (this.#state === 'turn' && t && !t.resolved) { this.#playCue(t); this.#announce(t); }
+            if (this.#state === 'turn' && t && !t.resolved) { this.#playCue(t); this.#announce(t, { asked: true }); }
             else this.#d.speech.say('Espera al siguiente enemigo.');
         } else if (cmd === 'status') {
             this.#d.speech.say(this.statusText());
         } else if (cmd === 'hint') {
             this.#d.speech.say(t && !t.resolved ? this.#hintText(t) : 'Ahora no hay ningún enemigo.');
+        } else if (cmd === 'announce') {
+            this.#d.onToggleAnnounce?.();
         }
     }
 
@@ -715,7 +718,8 @@ class CombatEngine {
             this.#d.audio.kill(t.dir, inst.def.tier);
             this.#d.onEvent?.('kill', { def: inst.def });
             const who = t.mimic ? 'Sombra' : inst.def.short;
-            msg += `${capFirst(who)} ${defeatedWord(inst.def)}.`;
+            const quiet = this.#d.settings.verbosity === 'sonido';
+            if (!quiet || inst.main || t.mimic) msg += `${capFirst(who)} ${defeatedWord(inst.def)}.`;
             if (inst.main && !this.#enc.endless) {
                 this.#bag = [];
                 this.#hud();
@@ -723,7 +727,7 @@ class CombatEngine {
                 return;
             }
             const n = this.#bag.length;
-            if (n > 0 && (n <= 3 || n % 5 === 0)) msg += n === 1 ? ' Queda 1.' : ` Quedan ${n}.`;
+            if (n > 0 && (quiet ? n <= 3 : n <= 3 || n % 5 === 0)) msg += n === 1 ? ' Queda 1.' : ` Quedan ${n}.`;
         } else {
             msg += `Le ${inst.lives === 1 ? 'queda 1 vida' : `quedan ${inst.lives} vidas`}.`;
             await this.#checkPhase(gen, inst);
