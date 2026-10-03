@@ -25,18 +25,19 @@ import { fileURLToPath } from 'node:url';
 // REPARTO DE VOCES — cámbialo a tu gusto.
 // voz: nombre de la voz de Azure (es-ES-…). velocidad / tono: ajustes
 // relativos (por ejemplo «-10%»). efecto: cómo suena en el juego
-// (narrador · eco · avatar · guardian · furia). pausa: silencio tras cada frase.
+// (narrador · eco · avatar · guardian · furia). pausa: silencio tras cada frase;
+// coma: silencio extra en cada coma (en milisegundos).
 // ═══════════════════════════════════════════════════════
 
 export const REPARTO = {
-    narrador: { nombre: 'Narrador', voz: 'es-ES-AlvaroNeural', genero: 'Male', velocidad: '-8%', tono: '-6%', pausa: 350, efecto: 'narrador' },
-    sylvara: { nombre: 'Maestra Sylvara', voz: 'es-ES-ElviraNeural', genero: 'Female', velocidad: '-5%', tono: '-3%', pausa: 250, efecto: 'eco' },
-    tomas: { nombre: 'Archivero Tomás', voz: 'es-ES-ArnauNeural', genero: 'Male', velocidad: '+2%', tono: '+3%', pausa: 200, efecto: 'eco' },
-    avatar: { nombre: 'Avatar del Silencio', voz: 'es-ES-SaulNeural', genero: 'Male', velocidad: '-14%', tono: '-14%', pausa: 600, efecto: 'avatar' },
-    ignar: { nombre: 'Ignar', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '-8%', tono: '-8%', pausa: 350, efecto: 'guardian' },
-    corriente: { nombre: 'La Gran Corriente', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '-12%', tono: '-3%', pausa: 450, efecto: 'guardian' },
-    zael: { nombre: 'Zael', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '-6%', tono: '+4%', pausa: 450, efecto: 'guardian' },
-    rok: { nombre: 'Rok', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-18%', tono: '-16%', pausa: 500, efecto: 'guardian' },
+    narrador: { nombre: 'Narrador', voz: 'es-ES-AlvaroNeural', genero: 'Male', velocidad: '-15%', tono: '-6%', pausa: 750, coma: 180, efecto: 'narrador' },
+    sylvara: { nombre: 'Maestra Sylvara', voz: 'es-ES-ElviraNeural', genero: 'Female', velocidad: '-12%', tono: '-3%', pausa: 600, coma: 140, efecto: 'eco' },
+    tomas: { nombre: 'Archivero Tomás', voz: 'es-ES-ArnauNeural', genero: 'Male', velocidad: '-6%', tono: '+3%', pausa: 450, coma: 100, efecto: 'eco' },
+    avatar: { nombre: 'Avatar del Silencio', voz: 'es-ES-SaulNeural', genero: 'Male', velocidad: '-22%', tono: '-14%', pausa: 950, coma: 300, efecto: 'avatar' },
+    ignar: { nombre: 'Ignar', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '-14%', tono: '-8%', pausa: 650, coma: 200, efecto: 'guardian' },
+    corriente: { nombre: 'La Gran Corriente', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '-18%', tono: '-3%', pausa: 750, coma: 220, efecto: 'guardian' },
+    zael: { nombre: 'Zael', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '-12%', tono: '+4%', pausa: 700, coma: 200, efecto: 'guardian' },
+    rok: { nombre: 'Rok', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-22%', tono: '-16%', pausa: 800, coma: 250, efecto: 'guardian' },
     ignar_furia: { nombre: 'Ignar (furia)', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '+4%', tono: '-6%', volumen: 'loud', pausa: 0, efecto: 'furia' },
     corriente_furia: { nombre: 'Leviatán (furia)', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '+2%', tono: '-8%', volumen: 'loud', pausa: 0, efecto: 'furia' },
     zael_furia: { nombre: 'Zael (furia)', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '+8%', tono: '+2%', volumen: 'loud', pausa: 0, efecto: 'furia' },
@@ -155,6 +156,7 @@ export function ssml(texto, rol) {
     const r = REPARTO[rol];
     let cuerpo = xml(suavizarMayusculas(texto));
     if (r.pausa) cuerpo = cuerpo.replace(/([.!?…])\s+/g, `$1<break time="${r.pausa}ms"/> `);
+    if (r.coma) cuerpo = cuerpo.replace(/([,;:])\s+/g, `$1<break time="${r.coma}ms"/> `);
     const vol = r.volumen ? ` volume="${r.volumen}"` : '';
     return '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" ' +
         'xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES">' +
@@ -263,7 +265,7 @@ async function main() {
             s: p.trozos.map((t, j) => {
                 const r = REPARTO[t.hablante];
                 const archivo = `${sec.key}-${String(i + 1).padStart(2, '0')}-${j + 1}.${ext}`;
-                const huella = hashTexto([t.texto, r.voz, r.velocidad, r.tono, r.volumen || '', r.pausa, formato].join('|'));
+                const huella = hashTexto([t.texto, r.voz, r.velocidad, r.tono, r.volumen || '', r.pausa, r.coma || 0, formato].join('|'));
                 usados.add(archivo);
                 manifiesto.cache[archivo] = huella;
                 return { f: archivo, v: t.hablante, e: r.efecto, texto: t.texto, huella };

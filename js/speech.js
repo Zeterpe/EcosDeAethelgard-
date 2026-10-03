@@ -113,7 +113,7 @@ class Speech {
     /**
      * Narra varios párrafos. Devuelve true si terminó, false si se saltó o se interrumpió.
      */
-    narrate(paragraphs, { gap = 450, pitch = 1, onParagraph = null } = {}) {
+    narrate(paragraphs, { gap = 450, pitch = 1, rate = 1, onParagraph = null } = {}) {
         this.#interrupt();
         const token = ++this.#narration;
         const epoch = this.#epoch;
@@ -125,7 +125,7 @@ class Speech {
                     if (!alive()) return false;
                     this.#skipPara = false;
                     onParagraph?.(paragraphs[i], i, paragraphs.length);
-                    await this.#speakText(paragraphs[i], { pitch, rate: 1, assertive: true }, () => alive() && !this.#skipPara);
+                    await this.#speakText(paragraphs[i], { pitch, rate, assertive: true }, () => alive() && !this.#skipPara);
                     if (!alive()) return false;
                     if (!this.#skipPara) await this.#waitMs(gap, () => !alive() || this.#skipPara);
                 }

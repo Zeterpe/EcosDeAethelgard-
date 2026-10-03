@@ -71,7 +71,10 @@ const App = (() => {
             else if (e.key === 'Escape' || e.key === ' ' || e.key.startsWith('Arrow')) e.preventDefault();
             return;
         }
-        if (scr === 'options' && OptionsScreen.onKey(e)) return;
+        if (scr === 'options') {
+            if (narrator.playing) narrator.skipAll();   // cualquier tecla corta la muestra de la historia
+            if (OptionsScreen.onKey(e)) return;
+        }
         if (scr === 'list' && ListScreen.onKey(e)) return;
         if (scr === 'route' && routeKey(e)) return;
         if (scr === 'login' || scr === 'account') UI.echoKey(e);
@@ -1202,7 +1205,7 @@ const App = (() => {
             { t: 'Niveles especiales', x: 'Frenesí: los enemigos llegan más rápido. Niebla: no se anuncia la posición, solo la oyes. Élite: solo criaturas de dos elementos. En los niveles 15 y 25 acecha la Sombra Imitadora: imita a otras criaturas y debes responderle como a la criatura que imita.' },
             { t: 'Guardianes', x: 'Cada guardián tiene una mecánica propia. Ignar lanza brasas: apágalas con Agua. El Leviatán se desplaza antes de atacar: apunta a donde termina. Zael lanza ecos falsos y lejanos: apunta al grito cercano. Rok alza un escudo de piedra: cuando lo oigas, no ataques. El Avatar del Silencio cambia de elemento sin parar.' },
             { t: 'Modos de juego', x: 'Historia: treinta niveles, cuatro rutas con sus guardianes y un enemigo final. Arena: oleadas infinitas con récord. Práctica libre: sin vidas ni puntos. Entrenamiento: aprende paso a paso.' },
-            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
+            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. La historia tiene su propia velocidad, aparte de la del resto del juego. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
         ];
     }
 
@@ -1268,6 +1271,8 @@ const App = (() => {
                     ? (narrator.available ? 'Cada personaje tiene su propia voz y sus efectos.' : 'Aún no se han generado los audios: mientras tanto se usa la voz del sistema.')
                     : 'La historia la lee la misma voz que el resto del juego.',
             },
+            { id: 'storyRate', label: 'Velocidad de la historia', type: 'range', min: 0.7, max: 1.5, step: 0.1, fmt: v => fmtDecimal(v) },
+            { id: 'storyTest', label: 'Escuchar la voz de la historia', type: 'action', run: () => testStory() },
             { id: 'test', label: 'Probar sonido y voz', type: 'action', run: () => testSound() },
             { id: 'reset', label: 'Borrar el progreso de este invocador', type: 'action', danger: true, run: () => confirmReset() },
         ];
@@ -1278,6 +1283,12 @@ const App = (() => {
         audio.applySettings();
         if (def.id === 'keyScheme') CombatView.updateKeyLabels(input.scheme);
         document.body.classList.toggle('no-visual', !settings.visualAids);
+    }
+
+    function testStory() {
+        speech.cancel();
+        if (settings.storyVoice !== 'sistema' && narrator.preview()) return;
+        speech.say('Así sonará la historia. Escucha: el Silencio se acerca, y solo tu voz puede despertar los ecos.', { rate: settings.storyRate });
     }
 
     function testSound() {

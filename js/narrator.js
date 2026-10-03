@@ -101,6 +101,27 @@ class Narrator {
         }
     }
 
+    /**
+     * Reproduce unos segundos del narrador a la velocidad elegida (para las opciones).
+     * Devuelve false si no hay narración grabada que enseñar.
+     */
+    preview(seconds = 8) {
+        if (!this.#manifest || !this.#audio.ready) return false;
+        const seg = Object.values(this.#manifest.secciones).flat().flatMap(p => p.s).find(s => s.v === 'narrador');
+        if (!seg) return false;
+        this.skipAll();
+        const token = ++this.#token;
+        const alive = () => token === this.#token;
+        this.#playing = true;
+        this.#audio.setVoiceDuck(true);
+        const stop = setTimeout(() => { if (alive()) this.skipAll(); }, seconds * 1000);
+        this.#playSegment(seg, alive).finally(() => {
+            clearTimeout(stop);
+            if (alive()) { this.#playing = false; this.#audio.setVoiceDuck(false); }
+        });
+        return true;
+    }
+
     skipParagraph() {
         this.#skipPara = true;
         this.#current?.finish();
@@ -149,7 +170,7 @@ class Narrator {
         return new Promise(resolve => {
             const ctx = this.#audio.ctx;
             const el = this.#element(seg.f);
-            el.playbackRate = clamp(this.#settings.speechRate, 0.6, 2);
+            el.playbackRate = clamp(this.#settings.storyRate || 1, 0.6, 2);
             el.preservesPitch = true;
             let src;
             try { src = ctx.createMediaElementSource(el); } catch (_) { src = null; }

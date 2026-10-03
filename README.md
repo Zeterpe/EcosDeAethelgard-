@@ -63,7 +63,7 @@ Cada jefe tiene su propia voz y una mecánica única:
 
 - Voz propia del juego o **modo lector de pantalla** (NVDA, JAWS, VoiceOver) mediante regiones `aria-live`; el campo de batalla usa `role="application"` para que las teclas lleguen al juego.
 - Menús navegables con flechas, lectura del elemento enfocado y sonidos de interfaz.
-- Dificultad (Aprendiz, Invocador, Archimago), velocidad, volumen y voz, nivel de detalle de los anuncios, ventana de combinación, **audio mono** (la voz anuncia siempre la posición), tic-tac de tiempo y radar visual opcional.
+- Dificultad (Aprendiz, Invocador, Archimago), velocidad, volumen y voz (y una velocidad aparte para la historia), nivel de detalle de los anuncios, ventana de combinación, **audio mono** (la voz anuncia siempre la posición), tic-tac de tiempo y radar visual opcional.
 - Subtítulos de todo lo que se dice, alto contraste, textos grandes y respeto de `prefers-reduced-motion`.
 
 ## Técnica

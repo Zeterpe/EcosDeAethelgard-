@@ -297,17 +297,19 @@ const Narration = {
             $('narration-progress').textContent = n > 1 ? `${i + 1} de ${n}` : '';
         };
         const plan = UI.narrator ? UI.narrator.plan(key, paragraphs) : null;
+        // Solo la historia (las narraciones con clave) usa la «Velocidad de la historia».
+        const rate = key ? clamp(UI.settings.storyRate || 1, 0.7, 1.5) : 1;
         this._recorded = !!plan;
         try {
             if (plan) {
                 UI.speech.cancel();
                 ok = await UI.narrator.play(paragraphs, plan, {
-                    gap: gap + 150, onParagraph,
-                    tts: p => UI.speech.say(p, { pitch }),
+                    gap: Math.round((gap + 500) / rate), onParagraph,
+                    tts: p => UI.speech.say(p, { pitch, rate }),
                     cancelTts: () => UI.speech.cancel(),
                 });
             } else {
-                ok = await UI.speech.narrate(paragraphs, { pitch, gap, onParagraph });
+                ok = await UI.speech.narrate(paragraphs, { pitch, gap: Math.round(gap / rate), rate, onParagraph });
             }
         } finally {
             this._recorded = false;

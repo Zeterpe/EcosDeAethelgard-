@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
     mono: false,
     visualAids: true,
     storyVoice: 'grabada',    // grabada: narradores generados · sistema: voz del navegador
+    storyRate: 1.0,           // velocidad de la historia, aparte de la voz del juego
 };
 
 const Storage = {
@@ -39,6 +40,7 @@ const Storage = {
         if (!DIFFICULTIES[s.difficulty]) s.difficulty = DEFAULT_SETTINGS.difficulty;
         if (!KEY_SCHEMES[s.keyScheme]) s.keyScheme = DEFAULT_SETTINGS.keyScheme;
         s.speechRate = clamp(+s.speechRate || 1, 0.5, 2.5);
+        s.storyRate = clamp(+s.storyRate || 1, 0.7, 1.5);
         return s;
     },
     saveSettings(s) { this._set(this.SETTINGS, JSON.stringify(s)); },
