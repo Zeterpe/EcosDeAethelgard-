@@ -49,10 +49,11 @@ Microsoft ha cambiado varias veces el nombre de este servicio (Speech, Servicios
 - Las cuentas de estudiante solo pueden crear recursos en **unas pocas regiones** (normalmente cinco, distintas para cada persona). Si al crear sale un error como *RequestDisallowedByAzure* o «no se permite la ubicación», averigua las tuyas así:
   1. En la barra de arriba del portal, pulsa el icono de **Cloud Shell** (`>_`).
   2. Elige **Bash**. Si pregunta por el almacenamiento, elige **No se requiere ninguna cuenta de almacenamiento**, selecciona tu suscripción y pulsa **Aplicar**.
-  3. Pega esta línea y pulsa Enter:
+  3. Pega estas dos líneas y pulsa Enter (la primera elige tu suscripción de estudiante; sin ella, a veces responde *PolicyAssignmentNotFound*):
 
      ```bash
-     az policy assignment show --name sys.regionrestriction --query "parameters.listOfAllowedLocations.value" -o tsv
+     az account set --subscription "Azure for Students"
+     az policy assignment show --scope "/subscriptions/$(az account show --query id -o tsv)" --name sys.regionrestriction --query parameters
      ```
 
   4. Saldrá la lista de tus regiones permitidas, por ejemplo `swedencentral`, `francecentral`, `italynorth`… Vuelve al enlace directo y elige una de ellas en **Región** (`swedencentral` aparece como «Sweden Central»). Las voces son las mismas en todas.
