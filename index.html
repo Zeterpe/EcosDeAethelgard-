@@ -5,193 +5,200 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ecos de Aethelgard</title>
-    <meta name="description" content="Audio RPG de acción para ciegos. Usa auriculares." />
+    <meta name="description" content="RPG de acción hecho de sonido, accesible para personas ciegas. Usa auriculares." />
+    <meta name="theme-color" content="#07060a" />
     <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
+    <main id="app">
 
-    <!-- ===== NOMBRE DE USUARIO ===== -->
-    <div id="screen-username" class="screen active" role="main" aria-label="Bienvenida">
-        <h1>Ecos de Aethelgard</h1>
-        <p class="subtitle">Introduce tu nombre de invocador.</p>
-        <div class="form-group">
-            <label for="input-username">Nombre de invocador:</label>
-            <input type="text" id="input-username" autocomplete="off" autocorrect="off" spellcheck="false"
-                maxlength="24" aria-describedby="username-hint" placeholder="Escribe tu nombre..." />
-            <span id="username-hint" class="hint">Letras y números, máximo 24 caracteres.</span>
-        </div>
-        <button id="btn-enter" class="btn-primary">Entrar al mundo</button>
-        <div id="username-error" class="error-msg" role="alert" aria-live="assertive"></div>
-    </div>
-
-    <!-- ===== MENÚ PRINCIPAL ===== -->
-    <div id="screen-menu" class="screen" role="main" aria-label="Menú principal">
-        <h1>Ecos de Aethelgard</h1>
-        <p class="subtitle" id="menu-welcome"></p>
-        <nav aria-label="Menú principal">
-            <ul class="menu-list" role="list">
-                <li><button id="btn-play" class="menu-btn"
-                        data-description="Continuar tu aventura desde donde la dejaste.">Jugar</button></li>
-                <li><button id="btn-combat-test" class="menu-btn"
-                        data-description="Modo libre de combate infinito para practicar.">Probar Combate</button></li>
-                <li><button id="btn-leaderboard" class="menu-btn"
-                        data-description="Ver la clasificación de invocadores de Aethelgard.">Clasificación</button>
-                </li>
-                <li><button id="btn-achievements" class="menu-btn"
-                        data-description="Ver logros desbloqueados.">Logros</button></li>
-                <li><button id="btn-options" class="menu-btn"
-                        data-description="Ajustar velocidad de voz.">Opciones</button></li>
-                <li><button id="btn-exit" class="menu-btn"
-                        data-description="Salir. El progreso se guarda automáticamente.">Salir</button></li>
-            </ul>
-        </nav>
-        <div id="save-info" class="save-info" aria-live="polite"></div>
-    </div>
-
-    <!-- ===== OPCIONES ===== -->
-    <div id="screen-options" class="screen" role="main" aria-label="Opciones">
-        <h2>Opciones</h2>
-        <div class="options-group" role="group" aria-labelledby="opt-voice-label">
-            <p id="opt-voice-label" class="options-label">Velocidad de voz</p>
-            <p class="hint">Flechas ◀ ▶ para ajustar.</p>
-            <div class="speed-control">
-                <button id="btn-speed-down" class="key-btn" aria-label="Reducir velocidad">◀</button>
-                <span id="speed-display" class="speed-display" aria-live="polite" aria-atomic="true">1.0×</span>
-                <button id="btn-speed-up" class="key-btn" aria-label="Aumentar velocidad">▶</button>
+        <!-- ===== INICIO ===== -->
+        <section id="screen-splash" class="screen active" aria-labelledby="splash-title">
+            <h1 id="splash-title" class="title">Ecos de Aethelgard</h1>
+            <p class="tagline">Un juego de rol de acción hecho de sonido</p>
+            <p class="subtitle">Usa auriculares. Elige cómo quieres escuchar el juego.</p>
+            <div class="menu-list">
+                <button id="btn-start-tts" class="menu-btn" data-nav
+                    data-desc="El juego te habla con su propia voz. Recomendado si no usas lector de pantalla.">
+                    Jugar con la voz del juego</button>
+                <button id="btn-start-sr" class="menu-btn" data-nav
+                    data-desc="Los anuncios se envían a tu lector de pantalla, como NVDA, JAWS o VoiceOver.">
+                    Jugar con mi lector de pantalla</button>
             </div>
-            <button id="btn-test-voice" class="menu-btn" style="max-width:320px;font-size:1rem;margin-top:1rem;">
-                Probar velocidad actual
-            </button>
-        </div>
-        <button id="btn-back-options" class="menu-btn back-btn">Volver al Menú</button>
-    </div>
+            <p class="hint">Flechas para elegir · Enter para comenzar</p>
+            <noscript>
+                <p class="error-msg">Este juego necesita JavaScript activado.</p>
+            </noscript>
+        </section>
 
-    <!-- ===== LOGROS ===== -->
-    <div id="screen-achievements" class="screen" role="main" aria-label="Logros">
-        <h2>Logros de <span id="ach-username"></span></h2>
-        <p class="hint">Flechas ↑↓ para navegar · Escape para volver.</p>
-        <div id="achievements-list" role="list" aria-label="Lista de logros"></div>
-        <button id="btn-back-ach" class="menu-btn back-btn">Volver al Menú</button>
-    </div>
-
-    <!-- ===== CLASIFICACIÓN ===== -->
-    <div id="screen-leaderboard" class="screen" role="main" aria-label="Clasificación de invocadores">
-        <h2>Clasificación</h2>
-        <p class="hint" id="lb-hint">Flechas ↑↓ para navegar · Enter para ver detalles · Escape para volver.</p>
-
-        <!-- Lista de jugadores -->
-        <div id="lb-list" role="list" aria-label="Lista de invocadores" aria-describedby="lb-hint"></div>
-
-        <!-- Panel de detalles (oculto por defecto) -->
-        <div id="lb-detail" class="lb-detail" role="region" aria-label="Detalles del invocador" aria-live="polite"
-            hidden>
-            <h3 id="lb-detail-name" class="lb-detail-name"></h3>
-            <dl id="lb-detail-body" class="lb-detail-body"></dl>
-            <button id="btn-lb-close" class="menu-btn back-btn">Cerrar (Escape)</button>
-        </div>
-
-        <button id="btn-back-lb" class="menu-btn back-btn">Volver al Menú</button>
-    </div>
-
-    <!-- ===== SELECCIÓN DE RUTA ===== -->
-    <div id="screen-route" class="screen" role="main" aria-label="Selección de ruta">
-        <h2>Elige tu Destino</h2>
-        <p class="subtitle" id="route-subtitle">Has dominado la academia. El mundo te espera.</p>
-        <div class="route-grid" aria-label="Rutas disponibles">
-            <div class="route-slot route-up">
-                <span class="route-key" aria-hidden="true">↑</span>
-                <span class="route-name">Fuego</span>
-                <span class="route-icon" aria-hidden="true">🔥</span>
+        <!-- ===== NOMBRE DE INVOCADOR ===== -->
+        <section id="screen-login" class="screen" aria-labelledby="login-title">
+            <h1 id="login-title" class="title">Ecos de Aethelgard</h1>
+            <form id="login-form" class="form-group" autocomplete="off">
+                <label for="input-username">Nombre de invocador</label>
+                <input type="text" id="input-username" autocomplete="off" autocorrect="off" spellcheck="false"
+                    maxlength="24" aria-describedby="username-hint" placeholder="Escribe tu nombre…" />
+                <span id="username-hint" class="hint">Letras y números, de 2 a 24 caracteres. Pulsa Enter para
+                    entrar.</span>
+                <button id="btn-enter" type="submit" class="btn-primary" data-nav>Entrar al mundo</button>
+                <div id="login-error" class="error-msg" role="alert"></div>
+            </form>
+            <div id="saved-wrap" hidden>
+                <h2 id="saved-title" class="section-title">Invocadores guardados</h2>
+                <ul id="saved-profiles" class="menu-list compact" aria-labelledby="saved-title"></ul>
             </div>
-            <div class="route-middle-row">
-                <div class="route-slot route-left">
-                    <span class="route-key" aria-hidden="true">←</span>
-                    <span class="route-name">Viento</span>
-                    <span class="route-icon" aria-hidden="true">💨</span>
+        </section>
+
+        <!-- ===== MENÚ PRINCIPAL ===== -->
+        <section id="screen-menu" class="screen" aria-labelledby="menu-title">
+            <h1 id="menu-title" class="title">Ecos de Aethelgard</h1>
+            <p class="subtitle" id="menu-welcome"></p>
+            <nav aria-label="Menú principal">
+                <ul class="menu-list" id="main-menu">
+                    <li><button class="menu-btn" data-nav data-action="story" id="btn-story">Historia</button></li>
+                    <li><button class="menu-btn" data-nav data-action="tutorial" id="btn-tutorial">Entrenamiento</button></li>
+                    <li><button class="menu-btn" data-nav data-action="arena" id="btn-arena">Arena de los Ecos</button></li>
+                    <li><button class="menu-btn" data-nav data-action="practice" id="btn-practice">Práctica libre</button></li>
+                    <li><button class="menu-btn" data-nav data-action="library" id="btn-library">Biblioteca</button></li>
+                    <li><button class="menu-btn" data-nav data-action="achievements" id="btn-achievements">Logros</button></li>
+                    <li><button class="menu-btn" data-nav data-action="leaderboard" id="btn-leaderboard">Clasificación</button></li>
+                    <li><button class="menu-btn" data-nav data-action="options" id="btn-options">Opciones</button></li>
+                    <li><button class="menu-btn" data-nav data-action="help" id="btn-help">Cómo jugar</button></li>
+                    <li><button class="menu-btn" data-nav data-action="logout" id="btn-logout">Cambiar de invocador</button></li>
+                </ul>
+            </nav>
+            <p id="save-info" class="save-info"></p>
+        </section>
+
+        <!-- ===== LISTA GENÉRICA (biblioteca, logros, clasificación, ayuda…) ===== -->
+        <section id="screen-list" class="screen" aria-labelledby="list-title">
+            <h2 id="list-title" class="screen-title"></h2>
+            <p id="list-hint" class="hint"></p>
+            <p id="list-tabs" class="list-tabs" hidden></p>
+            <ul id="list-items" class="item-list" aria-labelledby="list-title"></ul>
+            <button id="btn-list-back" class="menu-btn back-btn" data-nav>Volver</button>
+        </section>
+
+        <!-- ===== OPCIONES ===== -->
+        <section id="screen-options" class="screen" aria-labelledby="options-title">
+            <h2 id="options-title" class="screen-title">Opciones</h2>
+            <p class="hint">Flechas arriba y abajo para elegir · Izquierda y derecha para cambiar · Escape para volver</p>
+            <ul id="options-list" class="options-list"></ul>
+            <button id="btn-options-back" class="menu-btn back-btn" data-nav>Volver al menú</button>
+        </section>
+
+        <!-- ===== SELECCIÓN DE RUTA ===== -->
+        <section id="screen-route" class="screen" aria-labelledby="route-title">
+            <h2 id="route-title" class="screen-title">Elige tu Destino</h2>
+            <p class="subtitle" id="route-subtitle">Cada flecha te lleva a un guardián.</p>
+            <div class="route-grid" role="group" aria-label="Rutas">
+                <button class="route-btn route-up" data-nav data-route="fire" id="route-fire"></button>
+                <button class="route-btn route-left" data-nav data-route="wind" id="route-wind"></button>
+                <button class="route-btn route-center" data-nav data-route="final" id="route-final"></button>
+                <button class="route-btn route-right" data-nav data-route="earth" id="route-earth"></button>
+                <button class="route-btn route-down" data-nav data-route="water" id="route-water"></button>
+            </div>
+            <p class="hint">↑ Fuego · ↓ Agua · ← Viento · → Tierra · Enter para entrar</p>
+            <button id="btn-route-back" class="menu-btn back-btn" data-nav>Volver al menú</button>
+        </section>
+
+        <!-- ===== COMBATE / ENTRENAMIENTO ===== -->
+        <section id="screen-combat" class="screen screen-combat" aria-labelledby="combat-title">
+            <header class="combat-header">
+                <h2 id="combat-title" class="screen-title">Combate</h2>
+                <p id="combat-subtitle" class="subtitle"></p>
+            </header>
+
+            <div class="hud" id="hud">
+                <div class="hud-item hud-lives"><span class="hud-label">Vidas</span>
+                    <span id="hud-lives" class="hud-value hearts"></span></div>
+                <div class="hud-item"><span class="hud-label">Puntos</span>
+                    <span id="hud-score" class="hud-value">0</span></div>
+                <div class="hud-item"><span class="hud-label">Racha</span>
+                    <span id="hud-streak" class="hud-value">0</span></div>
+                <div class="hud-item"><span class="hud-label" id="hud-remaining-label">Quedan</span>
+                    <span id="hud-remaining" class="hud-value">0</span></div>
+            </div>
+            <div id="boss-bar" class="boss-bar" hidden>
+                <span id="boss-name" class="boss-name"></span>
+                <div class="boss-track"><div id="boss-fill" class="boss-fill"></div></div>
+            </div>
+
+            <div id="combat-stage" class="stage" role="application" tabindex="-1"
+                aria-roledescription="campo de batalla"
+                aria-label="Campo de batalla. Teclas de elemento y flechas para lanzar hechizos. Escape para pausar.">
+                <div class="radar" aria-hidden="true">
+                    <div class="slot slot-up" data-dir="up"><span class="slot-icon"></span><span class="slot-key">↑</span></div>
+                    <div class="slot slot-left" data-dir="left"><span class="slot-icon"></span><span class="slot-key">←</span></div>
+                    <div class="slot slot-center"><span class="player-icon">✦</span></div>
+                    <div class="slot slot-right" data-dir="right"><span class="slot-icon"></span><span class="slot-key">→</span></div>
+                    <div class="slot slot-down" data-dir="down"><span class="slot-icon"></span><span class="slot-key">↓</span></div>
                 </div>
-                <div class="route-slot route-center" id="route-final-boss" style="display:none">
-                    <span class="route-key" aria-hidden="true">Esp.</span>
-                    <span class="route-name">Jefe Final</span>
-                    <span class="route-icon" aria-hidden="true">💀</span>
-                </div>
-                <div class="route-slot route-right">
-                    <span class="route-key" aria-hidden="true">→</span>
-                    <span class="route-name">Tierra</span>
-                    <span class="route-icon" aria-hidden="true">🪨</span>
+                <div class="enemy-panel" aria-hidden="true">
+                    <p id="enemy-name" class="enemy-name">—</p>
+                    <p id="enemy-info" class="enemy-info"></p>
+                    <div class="timer"><div id="timer-fill" class="timer-fill"></div></div>
                 </div>
             </div>
-            <div class="route-slot route-down">
-                <span class="route-key" aria-hidden="true">↓</span>
-                <span class="route-name">Agua</span>
-                <span class="route-icon" aria-hidden="true">💧</span>
+
+            <div class="pad" aria-label="Controles táctiles">
+                <div class="pad-elements">
+                    <button class="pad-btn el-agua" data-el="agua"><span class="pad-key" data-keylabel="agua">A</span> 💧 Agua</button>
+                    <button class="pad-btn el-fuego" data-el="fuego"><span class="pad-key" data-keylabel="fuego">S</span> 🔥 Fuego</button>
+                    <button class="pad-btn el-tierra" data-el="tierra"><span class="pad-key" data-keylabel="tierra">D</span> 🪨 Tierra</button>
+                    <button class="pad-btn el-viento" data-el="viento"><span class="pad-key" data-keylabel="viento">F</span> 💨 Viento</button>
+                </div>
+                <div class="pad-dirs">
+                    <button class="pad-btn dir-up" data-dir="up" aria-label="Lanzar arriba">↑</button>
+                    <button class="pad-btn dir-left" data-dir="left" aria-label="Lanzar a la izquierda">←</button>
+                    <button class="pad-btn dir-right" data-dir="right" aria-label="Lanzar a la derecha">→</button>
+                    <button class="pad-btn dir-down" data-dir="down" aria-label="Lanzar abajo">↓</button>
+                </div>
             </div>
+
+            <ol id="combat-log" class="combat-log" aria-hidden="true"></ol>
+            <p class="hint combat-keys">Espacio: repetir · Enter: estado · H: pista · Escape: pausa</p>
+        </section>
+
+    </main>
+
+    <!-- ===== NARRACIÓN ===== -->
+    <div id="narration" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="narration-title">
+        <div class="panel narration-panel">
+            <p id="narration-title" class="overline"></p>
+            <p id="narration-text" class="narration-text" tabindex="-1"></p>
+            <p id="narration-progress" class="hint"></p>
+            <p class="hint">Enter: siguiente párrafo · Escape: saltar narración</p>
         </div>
-        <p class="hint" style="margin-top:1rem;">
-            ↑ Fuego · ↓ Agua · ← Viento · → Tierra
-            <span id="hint-final-boss" style="display:none"> · Espacio: Jefe Final Secreto</span>
-        </p>
-        <button id="btn-back-route" class="menu-btn back-btn" style="margin-top:1.5rem;">
-            Volver al Menú (Esc)
-        </button>
     </div>
 
-    <!-- ===== COMBATE ===== -->
-    <div id="screen-combat" class="screen" role="main" aria-label="Combate">
-        <h2 id="combat-title">Combate</h2>
-        <div class="hud-bar">
-            <div class="player-hud" aria-live="polite">
-                <span class="hud-label">Vidas:</span>
-                <span id="player-lives" class="hud-value">5</span>
-            </div>
-            <div class="level-hud" aria-live="polite">
-                <span class="hud-label">Nivel:</span>
-                <span id="current-level-display" class="hud-value">1</span>
-            </div>
-            <div class="progress-hud" aria-live="polite">
-                <span class="hud-label">Bolsa:</span>
-                <span id="enemies-progress" class="hud-value">0</span>
-            </div>
+    <!-- ===== DIÁLOGO ===== -->
+    <div id="dialog" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="dialog-title"
+        aria-describedby="dialog-text">
+        <div class="panel dialog-panel">
+            <h2 id="dialog-title" class="dialog-title"></h2>
+            <div id="dialog-text" class="dialog-text"></div>
+            <div id="dialog-buttons" class="menu-list"></div>
         </div>
-        <div id="enemy-status" class="enemy-status" aria-live="assertive">
-            <p id="enemy-name" class="enemy-name">—</p>
-            <p id="enemy-lives-display" class="enemy-lives"></p>
-            <div id="enemy-timer-bar" class="timer-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-                aria-valuenow="100" aria-label="Tiempo de reacción"></div>
-        </div>
-        <div class="key-reference" aria-label="Teclas de elemento">
-            <div class="key-group">
-                <span class="key-badge">A</span><span class="key-label">Agua</span>
-                <span class="key-badge">S</span><span class="key-label">Fuego</span>
-                <span class="key-badge">D</span><span class="key-label">Tierra</span>
-                <span class="key-badge">F</span><span class="key-label">Viento</span>
-            </div>
-            <div class="key-group">
-                <span class="key-badge">↑</span><span class="key-label">Arriba</span>
-                <span class="key-badge">↓</span><span class="key-label">Abajo</span>
-                <span class="key-badge">←</span><span class="key-label">Izq.</span>
-                <span class="key-badge">→</span><span class="key-label">Der.</span>
-            </div>
-        </div>
-        <div id="combat-log" class="combat-log" role="log" aria-live="polite" aria-label="Registro de combate">
-            <p class="log-hint">Preparando el campo de batalla…</p>
-        </div>
-        <div id="keys-active" class="keys-active" aria-hidden="true"></div>
-        <button id="btn-back-combat" class="menu-btn back-btn">Salir (Esc)</button>
     </div>
 
-    <!-- ===== JUEGO PLACEHOLDER ===== -->
-    <div id="screen-game" class="screen" role="main" aria-label="Juego">
-        <p class="subtitle">Modo historia — próximas fases.</p>
-        <button id="btn-back-from-game" class="menu-btn back-btn">Volver al Menú</button>
-    </div>
+    <div id="toast" class="toast" aria-hidden="true"></div>
+    <div id="caption" class="caption" aria-hidden="true"></div>
+    <div id="sr-assertive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+    <div id="sr-polite" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-    <div id="sr-announcer" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"
-        integrity="sha512-xi/RZRIF/S0hJ+yJJYuZ5yk6/8pCiRlEXZzoguSMl+vk2i3m6UjUO/WcZ11blrl/O+un075ThF/1nNNjZ1c7g=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="main.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/lore.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/speech.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/music.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/tutorial.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
 </body>
 
 </html>
