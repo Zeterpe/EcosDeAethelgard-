@@ -1,7 +1,7 @@
 {
  "version": 1,
  "formato": "mp3",
- "generado": "2026-10-03T22:07:41.691Z",
+ "generado": "2026-10-03T23:00:39.020Z",
  "secciones": {
   "echo_1": [
    {
@@ -2417,6 +2417,798 @@
      }
     ]
    }
+  ],
+  "level_1": [
+   {
+    "h": "742e6d3d",
+    "s": [
+     {
+      "f": "level_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_2": [
+   {
+    "h": "658992ad",
+    "s": [
+     {
+      "f": "level_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_3": [
+   {
+    "h": "34ed7989",
+    "s": [
+     {
+      "f": "level_3-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_4": [
+   {
+    "h": "42cae356",
+    "s": [
+     {
+      "f": "level_4-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_5": [
+   {
+    "h": "21f16554",
+    "s": [
+     {
+      "f": "level_5-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_6": [
+   {
+    "h": "a7f46417",
+    "s": [
+     {
+      "f": "level_6-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_7": [
+   {
+    "h": "1229c413",
+    "s": [
+     {
+      "f": "level_7-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_8": [
+   {
+    "h": "f4087b04",
+    "s": [
+     {
+      "f": "level_8-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_9": [
+   {
+    "h": "df655666",
+    "s": [
+     {
+      "f": "level_9-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_10": [
+   {
+    "h": "45db3de1",
+    "s": [
+     {
+      "f": "level_10-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_11": [
+   {
+    "h": "96359f8f",
+    "s": [
+     {
+      "f": "level_11-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_12": [
+   {
+    "h": "d9e7d278",
+    "s": [
+     {
+      "f": "level_12-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_13": [
+   {
+    "h": "b161eb0d",
+    "s": [
+     {
+      "f": "level_13-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_14": [
+   {
+    "h": "d241c7a8",
+    "s": [
+     {
+      "f": "level_14-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_15": [
+   {
+    "h": "6fbfb196",
+    "s": [
+     {
+      "f": "level_15-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_16": [
+   {
+    "h": "3a797421",
+    "s": [
+     {
+      "f": "level_16-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_17": [
+   {
+    "h": "bc5600de",
+    "s": [
+     {
+      "f": "level_17-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_18": [
+   {
+    "h": "b480e9a2",
+    "s": [
+     {
+      "f": "level_18-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_19": [
+   {
+    "h": "e14bd791",
+    "s": [
+     {
+      "f": "level_19-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_20": [
+   {
+    "h": "4b2fde51",
+    "s": [
+     {
+      "f": "level_20-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_21": [
+   {
+    "h": "cf8a4c1e",
+    "s": [
+     {
+      "f": "level_21-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_22": [
+   {
+    "h": "89076f5b",
+    "s": [
+     {
+      "f": "level_22-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_23": [
+   {
+    "h": "627e731a",
+    "s": [
+     {
+      "f": "level_23-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_24": [
+   {
+    "h": "568537d2",
+    "s": [
+     {
+      "f": "level_24-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_25": [
+   {
+    "h": "f103db80",
+    "s": [
+     {
+      "f": "level_25-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_26": [
+   {
+    "h": "6cf8944d",
+    "s": [
+     {
+      "f": "level_26-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_27": [
+   {
+    "h": "2abb30a1",
+    "s": [
+     {
+      "f": "level_27-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_28": [
+   {
+    "h": "1c122dc4",
+    "s": [
+     {
+      "f": "level_28-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_29": [
+   {
+    "h": "1088a2b3",
+    "s": [
+     {
+      "f": "level_29-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "level_30": [
+   {
+    "h": "c9311b68",
+    "s": [
+     {
+      "f": "level_30-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_fire_1": [
+   {
+    "h": "0a6b8dc6",
+    "s": [
+     {
+      "f": "route_fire_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_fire_2": [
+   {
+    "h": "60d47b78",
+    "s": [
+     {
+      "f": "route_fire_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_fire_3": [
+   {
+    "h": "30c97aa0",
+    "s": [
+     {
+      "f": "route_fire_3-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_fire_4": [
+   {
+    "h": "f82704e0",
+    "s": [
+     {
+      "f": "route_fire_4-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_fire_5": [
+   {
+    "h": "ef33cf36",
+    "s": [
+     {
+      "f": "route_fire_5-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_water_1": [
+   {
+    "h": "dcd09642",
+    "s": [
+     {
+      "f": "route_water_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_water_2": [
+   {
+    "h": "ece59c34",
+    "s": [
+     {
+      "f": "route_water_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_water_3": [
+   {
+    "h": "01f6d2f4",
+    "s": [
+     {
+      "f": "route_water_3-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_water_4": [
+   {
+    "h": "6a0b3e14",
+    "s": [
+     {
+      "f": "route_water_4-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_water_5": [
+   {
+    "h": "cb5f2cb2",
+    "s": [
+     {
+      "f": "route_water_5-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_wind_1": [
+   {
+    "h": "73bdaf53",
+    "s": [
+     {
+      "f": "route_wind_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_wind_2": [
+   {
+    "h": "b62358c5",
+    "s": [
+     {
+      "f": "route_wind_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_wind_3": [
+   {
+    "h": "cddfcc55",
+    "s": [
+     {
+      "f": "route_wind_3-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_wind_4": [
+   {
+    "h": "f3ce284b",
+    "s": [
+     {
+      "f": "route_wind_4-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_wind_5": [
+   {
+    "h": "6f33208b",
+    "s": [
+     {
+      "f": "route_wind_5-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_earth_1": [
+   {
+    "h": "5c981c2d",
+    "s": [
+     {
+      "f": "route_earth_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_earth_2": [
+   {
+    "h": "373e8a97",
+    "s": [
+     {
+      "f": "route_earth_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_earth_3": [
+   {
+    "h": "da194657",
+    "s": [
+     {
+      "f": "route_earth_3-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_earth_4": [
+   {
+    "h": "6ffe2d71",
+    "s": [
+     {
+      "f": "route_earth_4-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "route_earth_5": [
+   {
+    "h": "a8983e25",
+    "s": [
+     {
+      "f": "route_earth_5-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_wolf_fire_1": [
+   {
+    "h": "3ca0f266",
+    "s": [
+     {
+      "f": "meet_wolf_fire_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_wolf_fire_2": [
+   {
+    "h": "73801435",
+    "s": [
+     {
+      "f": "meet_wolf_fire_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_frog_water_1": [
+   {
+    "h": "ceef8666",
+    "s": [
+     {
+      "f": "meet_frog_water_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_frog_water_2": [
+   {
+    "h": "161bee6e",
+    "s": [
+     {
+      "f": "meet_frog_water_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_bat_wind_1": [
+   {
+    "h": "194a5238",
+    "s": [
+     {
+      "f": "meet_bat_wind_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_bat_wind_2": [
+   {
+    "h": "537aacb2",
+    "s": [
+     {
+      "f": "meet_bat_wind_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_golem_earth_1": [
+   {
+    "h": "4855fd7f",
+    "s": [
+     {
+      "f": "meet_golem_earth_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_golem_earth_2": [
+   {
+    "h": "3c0d71f7",
+    "s": [
+     {
+      "f": "meet_golem_earth_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_magma_elem_1": [
+   {
+    "h": "9cd6c279",
+    "s": [
+     {
+      "f": "meet_magma_elem_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_magma_elem_2": [
+   {
+    "h": "771512a1",
+    "s": [
+     {
+      "f": "meet_magma_elem_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_storm_spec_1": [
+   {
+    "h": "ef89c09b",
+    "s": [
+     {
+      "f": "meet_storm_spec_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_storm_spec_2": [
+   {
+    "h": "5784b0d3",
+    "s": [
+     {
+      "f": "meet_storm_spec_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_ent_forest_1": [
+   {
+    "h": "842d4bdf",
+    "s": [
+     {
+      "f": "meet_ent_forest_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_ent_forest_2": [
+   {
+    "h": "dadc3ea9",
+    "s": [
+     {
+      "f": "meet_ent_forest_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_djinn_desert_1": [
+   {
+    "h": "63b9c1d6",
+    "s": [
+     {
+      "f": "meet_djinn_desert_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_djinn_desert_2": [
+   {
+    "h": "4f9134dd",
+    "s": [
+     {
+      "f": "meet_djinn_desert_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
   ]
  },
  "cache": {
@@ -2667,6 +3459,72 @@
   "route_earth_encounter-01-1.mp3": "63e32a02",
   "route_earth_encounter-02-1.mp3": "fc595b3c",
   "route_earth_encounter-02-2.mp3": "0d2c5bb8",
-  "route_earth_encounter-03-1.mp3": "280aee2b"
+  "route_earth_encounter-03-1.mp3": "280aee2b",
+  "level_1-01-1.mp3": "eb1386ca",
+  "level_2-01-1.mp3": "98a8a21a",
+  "level_3-01-1.mp3": "002a63d6",
+  "level_4-01-1.mp3": "ebb384e7",
+  "level_5-01-1.mp3": "48650db1",
+  "level_6-01-1.mp3": "f8035690",
+  "level_7-01-1.mp3": "395d21ac",
+  "level_8-01-1.mp3": "48c59d01",
+  "level_9-01-1.mp3": "2cc71a17",
+  "level_10-01-1.mp3": "e54f74ce",
+  "level_11-01-1.mp3": "039fec48",
+  "level_12-01-1.mp3": "39923a75",
+  "level_13-01-1.mp3": "afe083fa",
+  "level_14-01-1.mp3": "3041ef85",
+  "level_15-01-1.mp3": "b8985d27",
+  "level_16-01-1.mp3": "f092fb0e",
+  "level_17-01-1.mp3": "10c9b60f",
+  "level_18-01-1.mp3": "3a41d943",
+  "level_19-01-1.mp3": "eb81401e",
+  "level_20-01-1.mp3": "1eaf90de",
+  "level_21-01-1.mp3": "5625274f",
+  "level_22-01-1.mp3": "64834b14",
+  "level_23-01-1.mp3": "75ae1fdb",
+  "level_24-01-1.mp3": "54afa113",
+  "level_25-01-1.mp3": "b924d33d",
+  "level_26-01-1.mp3": "b58f443a",
+  "level_27-01-1.mp3": "33dda88e",
+  "level_28-01-1.mp3": "285191c1",
+  "level_29-01-1.mp3": "2e822f4c",
+  "level_30-01-1.mp3": "eda08745",
+  "route_fire_1-01-1.mp3": "c51b0377",
+  "route_fire_2-01-1.mp3": "b1882575",
+  "route_fire_3-01-1.mp3": "a93ba8dd",
+  "route_fire_4-01-1.mp3": "c530c81d",
+  "route_fire_5-01-1.mp3": "3a86f2c7",
+  "route_water_1-01-1.mp3": "06e134e3",
+  "route_water_2-01-1.mp3": "9dea9b91",
+  "route_water_3-01-1.mp3": "888f3a51",
+  "route_water_4-01-1.mp3": "b7c76771",
+  "route_water_5-01-1.mp3": "f18a1773",
+  "route_wind_1-01-1.mp3": "2ebe26ec",
+  "route_wind_2-01-1.mp3": "a97b19d2",
+  "route_wind_3-01-1.mp3": "ec29f402",
+  "route_wind_4-01-1.mp3": "18ef3ea4",
+  "route_wind_5-01-1.mp3": "6b08bfe4",
+  "route_earth_1-01-1.mp3": "cd31669a",
+  "route_earth_2-01-1.mp3": "d271a210",
+  "route_earth_3-01-1.mp3": "207fd6d0",
+  "route_earth_4-01-1.mp3": "d3748efe",
+  "route_earth_5-01-1.mp3": "c40a37b2",
+  "meet_wolf_fire_1-01-1.mp3": "e1762e17",
+  "meet_wolf_fire_2-01-1.mp3": "99ff0a62",
+  "meet_frog_water_1-01-1.mp3": "edfaaa17",
+  "meet_frog_water_2-01-1.mp3": "ccbe81bf",
+  "meet_bat_wind_1-01-1.mp3": "6c7d4b35",
+  "meet_bat_wind_2-01-1.mp3": "e2e49773",
+  "meet_golem_earth_1-01-1.mp3": "df02ee98",
+  "meet_golem_earth_2-01-1.mp3": "13dc3670",
+  "meet_magma_elem_1-01-1.mp3": "1e6f42e6",
+  "meet_magma_elem_2-01-1.mp3": "55ea2e8e",
+  "meet_storm_spec_1-01-1.mp3": "ca93ed54",
+  "meet_storm_spec_2-01-1.mp3": "2374d36c",
+  "meet_ent_forest_1-01-1.mp3": "6bafd078",
+  "meet_ent_forest_2-01-1.mp3": "1da9e9f6",
+  "meet_djinn_desert_1-01-1.mp3": "71f07867",
+  "meet_djinn_desert_2-01-1.mp3": "c2c0e8ea"
  }
 }
