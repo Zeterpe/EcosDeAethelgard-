@@ -21,23 +21,33 @@ Mientras no hagas estos pasos, el juego funciona igual que ahora: la historia la
 
 1. Entra en <https://azure.microsoft.com/free> y crea la cuenta con tu cuenta de Microsoft (o crea una).
 2. Te pedirá un teléfono y una tarjeta **solo para verificar que eres una persona**. El plan que vamos a usar (**F0**) es gratuito para siempre y **nunca cobra**: si se acabaran los caracteres gratuitos del mes, simplemente deja de generar hasta el mes siguiente.
-   - Si eres estudiante, <https://azure.microsoft.com/free/students> no pide tarjeta.
+   - Si eres estudiante, <https://azure.microsoft.com/free/students> no pide tarjeta (mira la nota para estudiantes del paso 2).
 
 ## 2. Crear el recurso de voz
 
-1. Entra en <https://portal.azure.com>.
-2. **Crear un recurso** → busca **Speech** (o «Voz» / «Servicios de voz») → **Crear**.
-3. Rellena:
-   - **Suscripción**: la gratuita que acabas de crear.
+Microsoft ha cambiado varias veces el nombre de este servicio (Speech, Servicios de voz, Azure AI Speech, Azure Speech en Foundry Tools…), así que lo más fácil es el **enlace directo**, que abre el formulario correcto:
+
+**<https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices>**
+
+(Si prefieres buscarlo: en la barra de búsqueda de arriba del portal escribe **Speech** o **Voz** y elige **Servicios de voz** / **Speech services**. **No** elijas «Microsoft Foundry», «Recurso de Foundry» ni «Azure AI services»: esos no tienen plan gratuito.)
+
+1. Rellena el formulario:
+   - **Suscripción**: la tuya (por ejemplo «Azure for Students»).
    - **Grupo de recursos**: **Crear nuevo** → por ejemplo `ecos`.
-   - **Región**: **West Europe** (Europa occidental).
-   - **Nombre**: cualquiera, por ejemplo `ecos-voces`.
-   - **Plan de tarifa**: **Free F0**. Esto es importante: es el gratuito.
-4. **Revisar y crear** → **Crear**. Tarda un minuto.
-5. Pulsa **Ir al recurso** → en el menú izquierdo, **Claves y punto de conexión** (Keys and Endpoint).
-6. Copia la **CLAVE 1** y apunta la **Ubicación/Región** (será `westeurope`).
+   - **Región**: **West Europe** (Europa occidental). Si al crear da un error de región (ver más abajo), prueba otra.
+   - **Nombre**: cualquiera que no exista ya, por ejemplo `ecos-voces-tunombre`.
+   - **Plan de tarifa**: **Free F0**. Esto es importante: es el gratuito. Si no aparece F0, es que ya tienes otro recurso de voz gratuito en esa suscripción (solo se permite uno): usa ese.
+2. **Revisar y crear** → **Crear**. Tarda un minuto.
+3. Pulsa **Ir al recurso** → en el menú izquierdo, **Claves y punto de conexión** (Keys and Endpoint; a veces está dentro de **Administración de recursos**).
+4. Copia la **CLAVE 1** y apunta la **Ubicación/Región** tal como aparece ahí, en minúsculas y sin espacios: `westeurope`, `swedencentral`, `francecentral`, `northeurope`, `eastus`…
 
 > La clave es **secreta**: no la pegues en ningún archivo del juego ni se la pases a nadie. Solo va en los secretos de GitHub (paso 3).
+
+### Si tienes Azure for Students
+
+- No hace falta tarjeta y el plan **Free F0** sigue siendo gratis: no gasta tu crédito de estudiante.
+- Las cuentas de estudiante solo pueden crear recursos en **algunas regiones**. Si al crear sale un error como *RequestDisallowedByAzure* o «no se permite la ubicación», mira cuáles tienes permitidas: en el portal, **Suscripciones** → tu suscripción → **Directivas** (Policies) → la directiva «Allowed resource deployment regions». Vuelve al enlace directo y elige una de esas regiones (las europeas suenan igual de bien: las voces son las mismas en todas).
+- Si sale un error de que la suscripción «no está registrada» para *Microsoft.CognitiveServices*: **Suscripciones** → tu suscripción → **Proveedores de recursos** → busca `Microsoft.CognitiveServices` → **Registrar**, espera un par de minutos y vuelve a intentarlo.
 
 ## 3. Guardar la clave en GitHub (como secreto)
 
@@ -45,7 +55,7 @@ Mientras no hagas estos pasos, el juego funciona igual que ahora: la historia la
 2. **New repository secret**:
    - Nombre: `AZURE_SPEECH_KEY` · Valor: la CLAVE 1 → **Add secret**.
 3. **New repository secret** otra vez:
-   - Nombre: `AZURE_SPEECH_REGION` · Valor: `westeurope` → **Add secret**.
+   - Nombre: `AZURE_SPEECH_REGION` · Valor: la región del paso 2, por ejemplo `westeurope` → **Add secret**.
 
 GitHub guarda los secretos cifrados: nadie puede verlos, ni siquiera tú después de guardarlos.
 

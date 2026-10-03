@@ -171,7 +171,12 @@ function urlBase(region) { return `https://${region}.tts.speech.microsoft.com/co
 
 async function comprobarVoces(clave, region) {
     const url = process.env.AZURE_VOICES_URL || `${urlBase(region)}/voices/list`;
-    const r = await fetch(url, { headers: { 'Ocp-Apim-Subscription-Key': clave } });
+    let r;
+    try {
+        r = await fetch(url, { headers: { 'Ocp-Apim-Subscription-Key': clave } });
+    } catch (_) {
+        throw new Error(`No se pudo conectar con Azure en la región «${region}». AZURE_SPEECH_REGION debe ser la región del recurso, por ejemplo westeurope.`);
+    }
     if (r.status === 401 || r.status === 403) throw new Error('Azure rechaza la clave. Revisa AZURE_SPEECH_KEY y AZURE_SPEECH_REGION.');
     if (!r.ok) throw new Error(`No se pudo obtener la lista de voces (HTTP ${r.status}).`);
     const voces = (await r.json()).filter(v => v.Locale === 'es-ES');
@@ -236,7 +241,9 @@ async function main() {
         return;
     }
 
-    const clave = process.env.AZURE_SPEECH_KEY, region = process.env.AZURE_SPEECH_REGION;
+    // Admite la región escrita como en el portal («West Europe» → westeurope).
+    const clave = (process.env.AZURE_SPEECH_KEY || '').trim();
+    const region = (process.env.AZURE_SPEECH_REGION || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
     if (!clave || !region) {
         throw new Error('Faltan AZURE_SPEECH_KEY y AZURE_SPEECH_REGION. Consulta CONFIGURAR_VOCES.md.');
     }
