@@ -446,6 +446,28 @@ function fmtDuration(secs) {
     return parts.length ? parts.join(' y ') : 'menos de un minuto';
 }
 
+/**
+ * Frases fijas del modo historia. Las usan el juego y el generador de
+ * narración (tools/generar-narracion.mjs), así que se pueden grabar con
+ * la voz del narrador: si se cambian, hay que volver a generar las voces.
+ */
+const STORY_LINES = {
+    campaignIntro(n) {
+        const def = CAMPAIGN[n], mod = def.modifier ? MODIFIERS[def.modifier] : null;
+        const count = def.count + (def.miniboss ? 1 : 0);
+        let t = `Nivel ${n}. `;
+        if (mod) t += `${mod.name}: ${mod.desc} `;
+        if (def.miniboss) t += 'La Sombra Imitadora acecha entre los enemigos. ';
+        return t + `${plural(count, 'enemigo', 'enemigos')}. ¡Prepárate!`;
+    },
+    routeIntro(r, n) {
+        const R = ROUTES[r], def = routeLevelDef(r, n), mod = def.modifier ? MODIFIERS[def.modifier] : null;
+        return `Ruta de ${R.name}, nivel ${n} de ${ROUTE_LEVELS}. ${mod ? `${mod.name}: ${mod.desc} ` : ''}${plural(def.count, 'enemigo', 'enemigos')}.`;
+    },
+    meetName(def) { return `¡Nueva criatura! ${def.name}. ${def.desc} Escucha.`; },
+    meetWeak(def) { return `${weaknessText(def)} Nunca uses ${elementNames(def.cure)}: la curarías. Escucha otra vez.`; },
+};
+
 /** Describe cómo vencer a un perfil de combate (para pistas y bestiario). */
 function weaknessText(profile) {
     if (!profile.weak || profile.weak.length === 0) return 'Sin debilidad fija.';

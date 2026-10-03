@@ -52,7 +52,7 @@ const App = (() => {
     // ═══════════════════════════════════════════════════
 
     function unlock() {
-        if (audio.ready) { audio.resume(); return; }
+        if (audio.ready) { audio.resume(); narrator.recover(); return; }
         if (audio.init()) music.resumePending();
         speech.unlock();
     }
@@ -475,12 +475,12 @@ const App = (() => {
                 await Narration.run(LORE.creatures[id], { title: def.name, gap: 600, key: loreKey });
                 if (!alive()) return false;
             }
-            await Narration.run([`¡Nueva criatura! ${def.name}. ${def.desc} Escucha.`], { title: 'Bestiario' });
+            await Narration.run([STORY_LINES.meetName(def)], { title: 'Bestiario', key: `meet_${id}_1` });
             if (!alive()) return false;
             audio.playVoice(def.voice, 'center');
             await sleep(1900);
             if (!alive()) return false;
-            await Narration.run([`${weaknessText(profileOf(def))} Nunca uses ${elementNames(def.cure)}: la curarías. Escucha otra vez.`], { title: def.name });
+            await Narration.run([STORY_LINES.meetWeak(def)], { title: def.name, key: `meet_${id}_2` });
             if (!alive()) return false;
             audio.playVoice(def.voice, 'center');
             await sleep(1900);
@@ -629,12 +629,7 @@ const App = (() => {
         }
         if (!await introduceEnemies(def.pool.filter(id => !profile.met.includes(id)), alive)) return;
 
-        const count = def.count + (def.miniboss ? 1 : 0);
-        let intro = `Nivel ${n}. `;
-        if (mod) intro += `${mod.name}: ${mod.desc} `;
-        if (def.miniboss) intro += 'La Sombra Imitadora acecha entre los enemigos. ';
-        intro += `${plural(count, 'enemigo', 'enemigos')}. ¡Prepárate!`;
-        await Narration.run([intro], { title: `Nivel ${n}` });
+        await Narration.run([STORY_LINES.campaignIntro(n)], { title: `Nivel ${n}`, key: `level_${n}` });
         if (!alive()) return;
 
         const result = await runEncounter(campaignEncounter(n));
@@ -781,7 +776,7 @@ const App = (() => {
         music.play(R.theme, { intensity: 1 });
         audio.setReverb(R.reverb);
         if (!await introduceEnemies(def.pool.filter(id => !profile.met.includes(id)), alive)) return;
-        await Narration.run([`Ruta de ${R.name}, nivel ${n} de ${ROUTE_LEVELS}. ${mod ? `${mod.name}: ${mod.desc} ` : ''}${plural(def.count, 'enemigo', 'enemigos')}.`], { title });
+        await Narration.run([STORY_LINES.routeIntro(r, n)], { title, key: `route_${r}_${n}` });
         if (!alive()) return;
         const result = await runEncounter({
             kind: 'route', title, theme: R.theme, reverb: R.reverb,
@@ -1415,7 +1410,9 @@ const App = (() => {
                 id: 'storyVoice', label: 'Voz de la historia', type: 'choice', values: ['grabada', 'sistema'],
                 labels: { grabada: 'Narradores grabados', sistema: 'Voz del sistema' },
                 desc: v => v === 'grabada'
-                    ? (narrator.available ? 'Cada personaje tiene su propia voz y sus efectos.' : 'Aún no se han generado los audios: mientras tanto se usa la voz del sistema.')
+                    ? (narrator.available ? 'Cada personaje tiene su propia voz y sus efectos.'
+                        : narrator.broken ? 'Este navegador no ha podido reproducir los audios: mientras tanto se usa la voz del sistema.'
+                            : 'Aún no se han generado los audios: mientras tanto se usa la voz del sistema.')
                     : 'La historia la lee la misma voz que el resto del juego.',
             },
             { id: 'storyRate', label: 'Velocidad de la historia', type: 'range', min: 0.7, max: 1.5, step: 0.1, fmt: v => fmtDecimal(v) },
@@ -1474,10 +1471,14 @@ const App = (() => {
         document.body.classList.toggle('no-visual', !settings.visualAids);
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', e => { if (UI.current === 'combat') input.keyup(e); });
+        // En iPhone (y con VoiceOver) solo cuentan como gesto el toque al soltar y el clic.
         document.addEventListener('pointerdown', unlock, { capture: true });
+        document.addEventListener('touchend', unlock, { capture: true, passive: true });
+        document.addEventListener('click', unlock, { capture: true });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && combat.active && !combat.paused) openPause();
             if (document.hidden) Cloud.flush();
+            else if (audio.ready) audio.resume();
         });
         window.addEventListener('pagehide', () => Cloud.flush());
         $('btn-go-online').addEventListener('click', () => { audio.uiSelect(); connectCloud(); });

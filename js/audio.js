@@ -434,6 +434,8 @@ class AudioEngine {
         if (this.ctx) { this.resume(); return true; }
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return false;
+        // iPhone: que el sonido del juego no lo silencie el interruptor de silencio.
+        try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) { /* no disponible */ }
         try { this.ctx = new AC({ latencyHint: 'interactive' }); } catch (_) { return false; }
         const c = this.ctx;
         this.kit = new SynthKit(c);
@@ -459,7 +461,8 @@ class AudioEngine {
     }
 
     resume() {
-        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => { });
+        // «interrupted» es el estado de Safari tras una llamada o al volver de otra app.
+        if (this.ctx && this.ctx.state !== 'running' && this.ctx.state !== 'closed') this.ctx.resume().catch(() => { });
     }
 
     /** Bus de la narración grabada (volumen = volumen de voz). */

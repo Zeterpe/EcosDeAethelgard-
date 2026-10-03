@@ -72,11 +72,11 @@ export function cargarTextos() {
         const code = fs.readFileSync(path.join(ROOT, 'js', `${f}.js`), 'utf8').replace(/^(const|let) /gm, 'var ');
         vm.runInContext(code, ctx, { filename: `${f}.js` });
     }
-    return { L: ctx.LORE, X: ctx.LORE_EXTRA };
+    return { L: ctx.LORE, X: ctx.LORE_EXTRA, D: ctx };
 }
 
 /** Secciones narradas. La clave es la que usa el juego. citas: quién dice lo que va entre comillas. */
-export function secciones({ L, X }) {
+export function secciones({ L, X, D }) {
     const s = [];
     const add = (key, parrafos, hablante, citas = hablante) => s.push({ key, parrafos, hablante, citas });
     add('echo_1', L.echos[1], 'narrador');
@@ -118,6 +118,14 @@ export function secciones({ L, X }) {
     for (const r of ['fire', 'water', 'wind', 'earth']) {
         add(`route_${r}_legend`, L.bosses[r].legend, 'narrador');
         add(`route_${r}_encounter`, L.bosses[r].encounter, 'narrador', corrupto[r]);
+    }
+    // Frases fijas del modo historia (las mismas que dice el juego)
+    const S = D.STORY_LINES;
+    for (let n = 1; n <= D.COMMON_LEVELS; n++) add(`level_${n}`, [S.campaignIntro(n)], 'narrador');
+    for (const r of D.ROUTE_IDS) for (let n = 1; n <= D.ROUTE_LEVELS; n++) add(`route_${r}_${n}`, [S.routeIntro(r, n)], 'narrador');
+    for (const id of D.ALL_COMMON) {
+        add(`meet_${id}_1`, [S.meetName(D.ENEMIES[id])], 'narrador');
+        add(`meet_${id}_2`, [S.meetWeak(D.ENEMIES[id])], 'narrador');
     }
     return s;
 }

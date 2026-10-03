@@ -30,6 +30,7 @@ const UI = {
     },
 
     show(name, { focus = null, intro = null, silent = false } = {}) {
+        Narration.cancel();   // cambiar de pantalla corta la narración que siguiera sonando
         for (const [k, el] of Object.entries(this.screens)) el.classList.toggle('active', k === name);
         this.current = name;
         document.body.dataset.screen = name;
@@ -278,14 +279,17 @@ const Dialog = {
 const Narration = {
     active: false,
     _prevFocus: null,
-
     _recorded: false,
+    _token: 0,
 
     /** key: sección de la historia con narración grabada (si existe). */
     async run(paragraphs, { title = '', pitch = 1, gap = 450, key = null } = {}) {
         if (!paragraphs || !paragraphs.length) return true;
+        const token = ++this._token;
+        const current = () => token === this._token;
+        if (this.active) this._stopSound();          // otra narración seguía sonando: la sustituye
+        else this._prevFocus = document.activeElement;
         this.active = true;
-        this._prevFocus = document.activeElement;
         $('narration-title').textContent = title;
         $('narration-text').textContent = '';
         $('narration-progress').textContent = '';
@@ -293,6 +297,7 @@ const Narration = {
         UI.focus($('narration-text'), { silent: true });
         let ok;
         const onParagraph = (p, i, n) => {
+            if (!current()) return;
             $('narration-text').textContent = p;
             $('narration-progress').textContent = n > 1 ? `${i + 1} de ${n}` : '';
         };
@@ -312,13 +317,30 @@ const Narration = {
                 ok = await UI.speech.narrate(paragraphs, { pitch, gap: Math.round(gap / rate), rate, onParagraph });
             }
         } finally {
-            this._recorded = false;
-            this.active = false;
-            $('narration').hidden = true;
-            const prev = this._prevFocus;
-            if (prev && document.contains(prev) && prev.offsetParent !== null) UI.focus(prev, { silent: true });
+            // Si otra narración la ha sustituido, la pantalla ya es de esa otra.
+            if (current()) {
+                this._recorded = false;
+                this.active = false;
+                $('narration').hidden = true;
+                const prev = this._prevFocus;
+                if (prev && document.contains(prev) && prev.offsetParent !== null) UI.focus(prev, { silent: true });
+            }
         }
-        return ok;
+        return ok && current();
+    },
+
+    _stopSound() {
+        if (this._recorded) UI.narrator?.skipAll(); else UI.speech.skipNarration();
+    },
+
+    /** Corta la narración en curso, si la hay (al cambiar de pantalla). */
+    cancel() {
+        if (!this.active) return;
+        this._token++;
+        this._stopSound();
+        this._recorded = false;
+        this.active = false;
+        $('narration').hidden = true;
     },
 
     onKey(e) {
