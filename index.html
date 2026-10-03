@@ -32,7 +32,42 @@
             </noscript>
         </section>
 
-        <!-- ===== NOMBRE DE INVOCADOR ===== -->
+        <!-- ===== CUENTA ONLINE ===== -->
+        <section id="screen-account" class="screen" aria-labelledby="account-title">
+            <h1 id="account-title" class="title">Ecos de Aethelgard</h1>
+            <p class="subtitle" id="account-intro">Con una cuenta gratuita tu progreso se guarda en la nube y compites con tus amigos.</p>
+
+            <form id="form-login" class="form-group" novalidate aria-labelledby="login-heading">
+                <h2 id="login-heading" class="section-title">Iniciar sesión</h2>
+                <label for="login-email">Correo electrónico</label>
+                <input type="email" id="login-email" data-nav autocomplete="email" />
+                <label for="login-pass">Contraseña</label>
+                <input type="password" id="login-pass" data-nav autocomplete="current-password" />
+                <button type="submit" class="btn-primary" data-nav>Entrar</button>
+                <button type="button" id="btn-forgot" class="menu-btn small" data-nav>He olvidado mi contraseña</button>
+            </form>
+
+            <form id="form-register" class="form-group" novalidate hidden aria-labelledby="register-heading">
+                <h2 id="register-heading" class="section-title">Crear cuenta</h2>
+                <label for="reg-name">Nombre de invocador (lo verán tus amigos)</label>
+                <input type="text" id="reg-name" data-nav maxlength="24" autocomplete="nickname" />
+                <label for="reg-email">Correo electrónico (nadie más lo verá)</label>
+                <input type="email" id="reg-email" data-nav autocomplete="email" />
+                <label for="reg-pass">Contraseña, mínimo 6 caracteres</label>
+                <input type="password" id="reg-pass" data-nav autocomplete="new-password" />
+                <label class="check"><input type="checkbox" id="reg-consent" data-nav /> He leído y acepto la política de privacidad</label>
+                <button type="button" id="btn-read-privacy" class="menu-btn small" data-nav>Leer la política de privacidad</button>
+                <button type="submit" class="btn-primary" data-nav>Crear cuenta</button>
+            </form>
+
+            <div id="account-error" class="error-msg" role="alert"></div>
+            <div class="menu-list">
+                <button id="btn-account-switch" class="menu-btn" data-nav>¿No tienes cuenta? Crear una</button>
+                <button id="btn-account-guest" class="menu-btn" data-nav>Jugar sin cuenta (solo en este dispositivo)</button>
+            </div>
+        </section>
+
+        <!-- ===== NOMBRE DE INVOCADOR (sin cuenta) ===== -->
         <section id="screen-login" class="screen" aria-labelledby="login-title">
             <h1 id="login-title" class="title">Ecos de Aethelgard</h1>
             <form id="login-form" class="form-group" autocomplete="off">
@@ -44,6 +79,7 @@
                 <button id="btn-enter" type="submit" class="btn-primary" data-nav>Entrar al mundo</button>
                 <div id="login-error" class="error-msg" role="alert"></div>
             </form>
+            <button id="btn-go-online" class="menu-btn" data-nav hidden>Usar una cuenta online</button>
             <div id="saved-wrap" hidden>
                 <h2 id="saved-title" class="section-title">Invocadores guardados</h2>
                 <ul id="saved-profiles" class="menu-list compact" aria-labelledby="saved-title"></ul>
@@ -54,10 +90,13 @@
         <section id="screen-menu" class="screen" aria-labelledby="menu-title">
             <h1 id="menu-title" class="title">Ecos de Aethelgard</h1>
             <p class="subtitle" id="menu-welcome"></p>
+            <p class="motd" id="menu-motd" hidden></p>
             <nav aria-label="Menú principal">
                 <ul class="menu-list" id="main-menu">
                     <li><button class="menu-btn" data-nav data-action="story" id="btn-story">Historia</button></li>
                     <li><button class="menu-btn" data-nav data-action="tutorial" id="btn-tutorial">Entrenamiento</button></li>
+                    <li><button class="menu-btn" data-nav data-action="daily" id="btn-daily">Desafío diario</button></li>
+                    <li><button class="menu-btn" data-nav data-action="community" id="btn-community">Comunidad y duelos</button></li>
                     <li><button class="menu-btn" data-nav data-action="arena" id="btn-arena">Arena de los Ecos</button></li>
                     <li><button class="menu-btn" data-nav data-action="practice" id="btn-practice">Práctica libre</button></li>
                     <li><button class="menu-btn" data-nav data-action="library" id="btn-library">Biblioteca</button></li>
@@ -65,6 +104,8 @@
                     <li><button class="menu-btn" data-nav data-action="leaderboard" id="btn-leaderboard">Clasificación</button></li>
                     <li><button class="menu-btn" data-nav data-action="options" id="btn-options">Opciones</button></li>
                     <li><button class="menu-btn" data-nav data-action="help" id="btn-help">Cómo jugar</button></li>
+                    <li><button class="menu-btn" data-nav data-action="account" id="btn-account">Cuenta y privacidad</button></li>
+                    <li id="admin-item" hidden><button class="menu-btn admin-btn" data-nav data-action="admin" id="btn-admin">Panel del creador</button></li>
                     <li><button class="menu-btn" data-nav data-action="logout" id="btn-logout">Cambiar de invocador</button></li>
                 </ul>
             </nav>
@@ -188,6 +229,7 @@
     <div id="sr-assertive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
     <div id="sr-polite" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
+    <script src="js/config.js"></script>
     <script src="js/data.js"></script>
     <script src="js/lore.js"></script>
     <script src="js/storage.js"></script>
@@ -198,6 +240,8 @@
     <script src="js/combat.js"></script>
     <script src="js/tutorial.js"></script>
     <script src="js/ui.js"></script>
+    <script src="js/cloud.js"></script>
+    <script src="js/online.js"></script>
     <script src="js/app.js"></script>
 </body>
 

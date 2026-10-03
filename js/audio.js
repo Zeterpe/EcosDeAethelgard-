@@ -295,7 +295,7 @@ const VOICES = {
 
     // Djinn del Desierto: campanillas místicas + remolino de arena
     djinn(k, out, t, p) {
-        const notes = shuffle([0, 1, 4, 5, 7, 8, 10, 12]).slice(0, 4);
+        const notes = shuffle([0, 1, 4, 5, 7, 8, 10, 12], Math.random).slice(0, 4);
         notes.forEach((n, i) => {
             k.fm(out, { t: t + i * 0.12, f: 587 * p * Math.pow(2, n / 12), ratio: 3.5, index: [[0, 2.2], [0.5, 0.1]], dur: 0.55, a: 0.003, r: 0.5, exp: true, peak: 0.14 });
         });

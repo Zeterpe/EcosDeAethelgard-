@@ -15,6 +15,7 @@ const App = (() => {
     const input = new InputSystem(settings);
 
     let profile = null;
+    let mode = 'guest';         // guest: solo este navegador · cloud: cuenta online
     let flow = 0;              // token de flujo: cambia al navegar, invalida lo pendiente
     let pendingAch = [];       // logros conseguidos durante un combate (se leen al final)
 
@@ -34,7 +35,14 @@ const App = (() => {
     input.onChange = list => CombatView.armed(list);
 
     const sleep = ms => new Promise(r => setTimeout(r, ms));
-    const save = () => { if (profile) Storage.saveProfile(profile); };
+    function save() {
+        if (!profile) return;
+        if (mode === 'cloud' && Cloud.uid) {
+            profile.lastPlayed = Date.now();
+            Storage.saveCloudCache(Cloud.uid, profile);
+            Cloud.queueSave(profile);
+        } else Storage.saveProfile(profile);
+    }
     const newFlow = () => { const tok = ++flow; return () => tok === flow; };
 
     // ═══════════════════════════════════════════════════
@@ -65,7 +73,7 @@ const App = (() => {
         if (scr === 'options' && OptionsScreen.onKey(e)) return;
         if (scr === 'list' && ListScreen.onKey(e)) return;
         if (scr === 'route' && routeKey(e)) return;
-        if (scr === 'login' && loginKey(e)) return;
+        if (scr === 'login' || scr === 'account') UI.echoKey(e);
         defaultKeys(e);
     }
 
@@ -77,18 +85,6 @@ const App = (() => {
         else if (e.key === 'Home' && !inText) { e.preventDefault(); UI.moveFocus('first'); }
         else if (e.key === 'End' && !inText) { e.preventDefault(); UI.moveFocus('last'); }
         else if (e.key === 'Escape') { if (UI.back()) e.preventDefault(); }
-    }
-
-    function loginKey(e) {
-        // Eco de teclado para quien juega sin lector de pantalla.
-        if (e.target?.id !== 'input-username' || settings.output !== 'tts') return false;
-        if (e.ctrlKey || e.metaKey || e.altKey) return false;
-        if (e.key.length === 1) speech.say(e.key === ' ' ? 'espacio' : e.key);
-        else if (e.key === 'Backspace') {
-            const v = e.target.value;
-            speech.say(v ? `${v.slice(-1)} borrada` : 'vacío');
-        }
-        return false;
     }
 
     // ═══════════════════════════════════════════════════
@@ -107,12 +103,30 @@ const App = (() => {
         settings.output = mode;
         Storage.saveSettings(settings);
         music.play('menu', { intensity: 1 });
-        goLogin(true);
+        if (Cloud.enabled) connectCloud(true);
+        else goLogin(true);
     }
 
-    function goLogin(first = false) {
+    /** Conecta con el servicio online y entra en la cuenta (o muestra la pantalla de cuenta). */
+    async function connectCloud(first = false) {
+        const alive = newFlow();
+        speech.say('Conectando con el servidor…');
+        const ok = await Cloud.init();
+        if (!alive()) return;
+        if (!ok) {
+            goLogin(first, 'No se pudo conectar con el servidor online. Puedes jugar sin cuenta; tu progreso se guardará en este dispositivo.');
+            return;
+        }
+        if (Cloud.signedIn) Online.startCloudSession();
+        else Online.showAccountScreen({
+            intro: first ? 'Ecos de Aethelgard. Inicia sesión o crea una cuenta gratuita para guardar tu progreso en la nube y competir con tus amigos. También puedes jugar sin cuenta.' : null,
+        });
+    }
+
+    function goLogin(first = false, introOverride = null) {
         flow++;
         combat.stop(); tutorial.stop();
+        $('btn-go-online').hidden = !Cloud.enabled;
         renderSavedProfiles();
         const inp = $('input-username');
         inp.value = Storage.lastUser();
@@ -121,9 +135,9 @@ const App = (() => {
         UI.backHandlers.login = null;
         UI.show('login', {
             focus: inp,
-            intro: first
+            intro: introOverride || (first
                 ? 'Ecos de Aethelgard. Escribe tu nombre de invocador y pulsa Enter. Con las flechas puedes elegir un invocador guardado.'
-                : 'Elige o escribe un nombre de invocador.',
+                : 'Jugar sin cuenta. Elige o escribe un nombre de invocador. Tu progreso se guardará solo en este dispositivo.'),
         });
     }
 
@@ -157,6 +171,7 @@ const App = (() => {
         const isNew = !p;
         if (isNew) p = newProfile(name);
         profile = p;
+        mode = 'guest';
         save();
         audio.uiSelect();
         goMenu(isNew
@@ -172,6 +187,7 @@ const App = (() => {
         flow++;
         combat.stop();
         tutorial.stop();
+        GameRandom.clear();
         if (Dialog.active) Dialog.close(undefined);
         audio.setHeartbeat(false);
         audio.setMuffled(false);
@@ -213,7 +229,28 @@ const App = (() => {
         $('btn-leaderboard').dataset.desc = 'Récords de los invocadores de este dispositivo y de las leyendas de la Academia.';
         $('btn-options').dataset.desc = `Dificultad: ${DIFFICULTIES[settings.difficulty].name}. Voz, volumen, controles y accesibilidad.`;
         $('btn-help').dataset.desc = 'Reglas, teclas y consejos.';
-        $('btn-logout').dataset.desc = 'Tu progreso está guardado.';
+        const online = mode === 'cloud' && Cloud.signedIn;
+        $('btn-daily').dataset.desc = 'Las mismas oleadas para todos durante el día. ' +
+            (profile.dailyBest?.day === todayId() ? `Tu mejor puntuación hoy: ${fmtNum(profile.dailyBest.score)}.` : 'Aún no lo has jugado hoy.');
+        $('btn-community').closest('li').hidden = !Cloud.enabled;
+        const pend = online ? Online.pending : 0;
+        $('btn-community').textContent = pend ? `Comunidad y duelos (${pend})` : 'Comunidad y duelos';
+        $('btn-community').dataset.desc = online
+            ? (pend ? `Tienes ${plural(pend, 'duelo pendiente', 'duelos pendientes')}. ` : '') + 'Amigos, fichas, logros de los demás, duelos y clasificación online.'
+            : 'Necesitas una cuenta online gratuita para competir con tus amigos.';
+        $('btn-leaderboard').dataset.desc = online
+            ? 'Clasificación online: arena, historia, logros, duelos y desafío diario.'
+            : 'Récords de los invocadores de este dispositivo y de las leyendas de la Academia.';
+        $('btn-account').dataset.desc = online
+            ? `Sesión iniciada como ${profile.username}. Privacidad, descargar tus datos, cerrar sesión o borrar tu cuenta.`
+            : 'Política de privacidad, tus datos' + (Cloud.enabled ? ' e iniciar sesión online.' : '.');
+        $('admin-item').hidden = !(online && Cloud.isAdmin);
+        $('btn-admin').dataset.desc = 'Control total: jugadores, logros, puntuaciones, avisos y duelos.';
+        $('btn-logout').textContent = online ? 'Cerrar sesión' : 'Cambiar de invocador';
+        $('btn-logout').dataset.desc = online ? 'Tu progreso está guardado en la nube.' : 'Tu progreso está guardado.';
+        const m = online ? Online.motd : null;
+        $('menu-motd').hidden = !m?.text;
+        $('menu-motd').textContent = m?.text ? `📣 ${m.text}` : '';
         const last = new Date(profile.lastPlayed).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
         $('save-info').textContent = `${progressLabel(profile)} · ${profile.achievements.length} logros · Última sesión: ${last}`;
     }
@@ -226,10 +263,19 @@ const App = (() => {
             practice: () => openPracticeMenu(),
             library: () => openLibrary(),
             achievements: () => openAchievements(),
-            leaderboard: () => openLeaderboard(),
+            leaderboard: () => (Online.isCloud() ? Online.openRankings() : openLeaderboard()),
             options: () => openOptions(),
             help: () => openHelp(),
-            logout: () => { speech.say('Hasta pronto, ' + profile.username + '.'); profile = null; goLogin(); },
+            daily: () => Online.openDaily(),
+            community: () => Online.openCommunity(),
+            account: () => Online.openAccountMenu(),
+            admin: () => Online.openAdmin(),
+            logout: () => {
+                if (Online.isCloud()) { Online.logout(); return; }
+                speech.say('Hasta pronto, ' + profile.username + '.');
+                profile = null;
+                goLogin();
+            },
         };
         document.querySelectorAll('#main-menu [data-action]').forEach(b => {
             b.addEventListener('click', () => {
@@ -238,7 +284,7 @@ const App = (() => {
                 actions[b.dataset.action]?.();
             });
         });
-        UI.backHandlers.menu = () => UI.say('Estás en el menú principal. Para salir, elige Cambiar de invocador o cierra la pestaña.');
+        UI.backHandlers.menu = () => UI.say('Estás en el menú principal. Para salir, elige Cerrar sesión o Cambiar de invocador, o cierra la pestaña.');
     }
 
     // ═══════════════════════════════════════════════════
@@ -319,7 +365,26 @@ const App = (() => {
 
     function runEncounter(enc) {
         pendingAch = [];
-        return new Promise(resolve => { enc.onEnd = resolve; combat.start(enc); });
+        GameRandom.clear();
+        if (enc.seed) GameRandom.seed(enc.seed);   // duelos y desafío diario: mismas oleadas para todos
+        return new Promise(resolve => {
+            enc.onEnd = r => { GameRandom.clear(); resolve(r); };
+            combat.start(enc);
+        });
+    }
+
+    /** Encuentro de Arena (también lo usan los duelos y el desafío diario). */
+    function arenaEncounter(o = {}) {
+        return {
+            kind: 'arena', endless: true, title: 'Arena de los Ecos', theme: 'arena', reverb: 'hall',
+            reactionFor: w => Math.max(2000, 4800 - 170 * (w - 1)),
+            makeBag: w => arenaWave(w),
+            waveText: (w, bag) => {
+                const boss = bag.find(i => i.def.tier === 'boss');
+                return `Oleada ${w}: ${plural(bag.length, 'enemigo', 'enemigos')}.${boss ? ` ¡${boss.def.short} entra en la arena!` : ''}`;
+            },
+            ...o,
+        };
     }
 
     function showCombat(title, subtitle = '', mode = 'combat') {
@@ -361,7 +426,7 @@ const App = (() => {
         const alive = newFlow();
         profile.story.defeatsInRow++;
         save();
-        let text = pick(LORE_EXTRA.defeatLines);
+        let text = pick(LORE_EXTRA.defeatLines, Math.random);
         if (profile.story.defeatsInRow >= 3 && settings.difficulty !== 'aprendiz') {
             text += '\nConsejo: puedes bajar la dificultad a Aprendiz en Opciones, o entrenar sin riesgo en la Práctica libre.';
         }
@@ -786,15 +851,7 @@ const App = (() => {
             (rec.bestScore > 0 ? ` Tu récord: ${fmtNum(rec.bestScore)} puntos, oleada ${rec.bestWave}.` : ' ¿Hasta dónde llegarás?'),
         ], { title: 'Arena' });
         if (!alive()) return;
-        const result = await runEncounter({
-            kind: 'arena', endless: true, title: 'Arena de los Ecos', theme: 'arena', reverb: 'hall',
-            reactionFor: w => Math.max(2000, 4800 - 170 * (w - 1)),
-            makeBag: w => arenaWave(w),
-            waveText: (w, bag) => {
-                const boss = bag.find(i => i.def.tier === 'boss');
-                return `Oleada ${w}: ${plural(bag.length, 'enemigo', 'enemigos')}.${boss ? ` ¡${boss.def.short} entra en la arena!` : ''}`;
-            },
-        });
+        const result = await runEncounter(arenaEncounter());
         if (!alive()) return;
         applyResult(result, 'arena');
         const isRecord = result.score > rec.bestScore;
@@ -802,7 +859,7 @@ const App = (() => {
         if (isRecord) rec.bestScore = result.score;
         rec.bestWave = Math.max(rec.bestWave, result.wave);
         save();
-        const board = arenaBoard();
+        const board = Online.isCloud() ? [] : arenaBoard();
         const pos = board.findIndex(e => e.you && e.score === rec.bestScore) + 1;
         const text = [
             `Llegaste a la oleada ${result.wave}.`,
@@ -816,8 +873,10 @@ const App = (() => {
         });
         if (!alive()) return;
         if (c === 'again') startArena();
-        else if (c === 'board') { goMenu(); openLeaderboard(); }
-        else goMenu('Menú principal.', 'btn-arena');
+        else if (c === 'board') {
+            goMenu();
+            if (Online.isCloud()) { await Cloud.flush(); Online.openRankings(0); } else openLeaderboard();
+        } else goMenu('Menú principal.', 'btn-arena');
     }
 
     // ═══════════════════════════════════════════════════
@@ -1028,19 +1087,33 @@ const App = (() => {
     // Logros y clasificación
     // ═══════════════════════════════════════════════════
 
-    function openAchievements() {
-        flow++;
+    async function openAchievements() {
+        const alive = newFlow();
         const n = profile.achievements.length;
+        let specials = [];
+        if (Online.isCloud() && (profile.customAch || []).length) {
+            try {
+                const all = await Cloud.listCustomAchievements();
+                specials = all.filter(a => profile.customAch.includes(a.id));
+            } catch (_) { /* sin conexión */ }
+            if (!alive()) return;
+        }
         ListScreen.open({
             title: `Logros de ${profile.username}`,
-            intro: `Logros: ${n} de ${ACHIEVEMENTS_DEF.length} desbloqueados.`,
-            items: ACHIEVEMENTS_DEF.map(a => {
-                const got = profile.achievements.includes(a.id);
-                return {
-                    label: a.name, sub: a.desc, icon: got ? '🏆' : '🔒', cls: got ? 'unlocked' : 'locked',
-                    speak: `${a.name}. ${got ? 'Desbloqueado' : 'Bloqueado'}. ${a.desc}`,
-                };
-            }),
+            intro: `Logros: ${n} de ${ACHIEVEMENTS_DEF.length} desbloqueados.` + (specials.length ? ` Y ${plural(specials.length, 'logro especial', 'logros especiales')} del creador.` : ''),
+            items: [
+                ...specials.map(a => ({
+                    label: a.name, sub: `Logro especial del creador · ${a.desc || ''}`, icon: a.icon || '🌟', cls: 'unlocked',
+                    speak: `Logro especial del creador: ${a.name}. ${a.desc || ''}`,
+                })),
+                ...ACHIEVEMENTS_DEF.map(a => {
+                    const got = profile.achievements.includes(a.id);
+                    return {
+                        label: a.name, sub: a.desc, icon: got ? '🏆' : '🔒', cls: got ? 'unlocked' : 'locked',
+                        speak: `${a.name}. ${got ? 'Desbloqueado' : 'Bloqueado'}. ${a.desc}`,
+                    };
+                }),
+            ],
             onBack: () => goMenu('Menú principal.', 'btn-achievements'),
         });
     }
@@ -1237,6 +1310,21 @@ const App = (() => {
         document.addEventListener('pointerdown', unlock, { capture: true });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && combat.active && !combat.paused) openPause();
+            if (document.hidden) Cloud.flush();
+        });
+        window.addEventListener('pagehide', () => Cloud.flush());
+        $('btn-go-online').addEventListener('click', () => { audio.uiSelect(); connectCloud(); });
+
+        Online.init({
+            speech, audio, music, settings, input,
+            getProfile: () => profile,
+            getMode: () => mode,
+            setSession: (p, m) => { profile = p; mode = m; save(); },
+            replaceProfile: p => { profile = p; if (mode === 'cloud' && Cloud.uid) Storage.saveCloudCache(Cloud.uid, p); if (UI.current === 'menu') refreshMenu(); },
+            clearSession: () => { profile = null; mode = 'guest'; },
+            save, goMenu, goLogin, connectCloud, newFlow, runEncounter, arenaEncounter, showCombat,
+            applyResult, resultLines, unlockAch,
+            refreshMenu: () => { if (profile && UI.current === 'menu') refreshMenu(); },
         });
 
         $('login-form').addEventListener('submit', e => { e.preventDefault(); login($('input-username').value); });
@@ -1268,6 +1356,8 @@ const App = (() => {
             settings, speech, audio, music, input, combat, tutorial,
             get profile() { return profile; },
             get flow() { return flow; },
+            get mode() { return mode; },
+            cloud: Cloud, online: Online,
             setTimeScale(v) { combat.timeScale = v; },
             login, goMenu, startStory, playCampaignLevel, playRouteLevel, playGuardian, playFinal,
             startArena, startPractice, startTutorial, showRouteSelect,

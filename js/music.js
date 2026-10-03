@@ -100,19 +100,6 @@ const THEMES = {
     },
 };
 
-/** Generador pseudoaleatorio con semilla: el motivo de cada tema siempre es el mismo. */
-function seededRandom(seedStr) {
-    let h = 2166136261;
-    for (const ch of seedStr) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
-    return () => {
-        h += 0x6D2B79F5;
-        let t = h;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
-
 class MusicEngine {
     #audio; #themeId = null; #theme = null; #out = null; #bed = null;
     #timer = null; #nextTime = 0; #step = 0; #intensity = 1; #tempo = 1;
@@ -193,7 +180,7 @@ class MusicEngine {
     }
 
     #makeMotif(themeId) {
-        const rnd = seededRandom(themeId);
+        const rnd = makeRng(themeId);   // el motivo de cada tema siempre es el mismo
         const steps = (this.#theme.steps || 16) * 2;
         this.#motif = Array.from({ length: steps }, (_, i) => {
             if (i % 2 === 1) return null;

@@ -372,6 +372,10 @@ const ACHIEVEMENTS_DEF = [
     { id: 'arena20', name: 'Leyenda de la Arena', desc: 'Alcanza la oleada 20 en la Arena.' },
     { id: 'bestiary', name: 'Erudito', desc: 'Encuentra a todas las criaturas comunes del Bestiario.' },
     { id: 'archimago', name: 'Archimago', desc: 'Purifica a un guardián en dificultad Archimago.' },
+    { id: 'daily', name: 'Eco del Día', desc: 'Completa un desafío diario.' },
+    { id: 'friend', name: 'Compañeros de Armas', desc: 'Añade a un amigo en la Comunidad.' },
+    { id: 'duel_win', name: 'Primer Duelo', desc: 'Gana un duelo contra otro invocador.' },
+    { id: 'duel_master', name: 'Maestro Duelista', desc: 'Gana cinco duelos.' },
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -388,10 +392,34 @@ const LEGENDS = [
 // Utilidades compartidas
 // ═══════════════════════════════════════════════════════
 
-function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-function shuffle(arr) {
+/** Generador pseudoaleatorio con semilla (mulberry32 sobre un hash FNV). */
+function makeRng(seedStr) {
+    let h = 2166136261;
+    for (const ch of String(seedStr)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+    return () => {
+        h += 0x6D2B79F5;
+        let t = h;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+/**
+ * Azar de la partida. Con semilla (desafío diario, duelos) todos los jugadores
+ * reciben las mismas oleadas, criaturas y direcciones.
+ */
+const GameRandom = {
+    _r: null,
+    seed(s) { this._r = makeRng(s); },
+    clear() { this._r = null; },
+    get seeded() { return !!this._r; },
+};
+function rand() { return GameRandom._r ? GameRandom._r() : Math.random(); }
+function pick(arr, rnd = rand) { return arr[Math.floor(rnd() * arr.length)]; }
+function shuffle(arr, rnd = rand) {
     const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
 }
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }

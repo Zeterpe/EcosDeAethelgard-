@@ -1,0 +1,4 @@
+# Registros de los emuladores de Firebase
+*-debug.log
+.firebase/
+node_modules/

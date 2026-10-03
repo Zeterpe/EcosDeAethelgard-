@@ -22,6 +22,19 @@ Pulsa el elemento y, enseguida, la flecha. El elemento queda «cargado» durante
 
 **Posición por sonido:** izquierda y derecha suenan en cada oído (con un chasquido de madera); arriba suena agudo y brillante (con una campanilla); abajo, grave y apagado (con un golpe sordo).
 
+## Online con amigos (gratis)
+
+Con una cuenta gratuita la partida se guarda en la nube y se compite con los amigos:
+
+- **Clasificación online**: Arena, Historia, Logros, Duelos y Desafío de hoy, marcando a tus amigos con ★.
+- **Comunidad**: lista de invocadores, amigos, la ficha de cada uno con sus logros, récords y estadísticas.
+- **Duelos**: desafías a alguien, juegas 5 oleadas y después tu rival juega exactamente las mismas; gana quien saque más puntos. Avisos en directo, revancha e historial de victorias y derrotas.
+- **Desafío diario**: las mismas oleadas para todos durante el día (a veces con Niebla o Frenesí) y su propia clasificación.
+- **Panel del creador**: solo para ti. Quitar o dar logros, crear logros especiales, reiniciar récords, cambiar niveles, suspender o borrar cuentas, publicar avisos y moderar duelos y puntuaciones.
+- **Privacidad**: política de privacidad con consentimiento, descarga de todos tus datos y borrado inmediato de la cuenta. El correo nunca se muestra a nadie.
+
+Para activarlo hay que crear un proyecto gratuito de Firebase: sigue **[CONFIGURAR_ONLINE.md](CONFIGURAR_ONLINE.md)** paso a paso. Sin configurarlo, el juego funciona sin conexión como siempre.
+
 ## Modos
 
 - **Historia**: 30 niveles en tres actos, con ecos narrados, presentación de cada criatura nueva, niveles especiales (Frenesí, Niebla, Élite) y la Sombra Imitadora en los niveles 15 y 25. Después, cuatro rutas con su guardián y el combate final contra el Avatar del Silencio. Si caes, repites el nivel: nunca pierdes el progreso.
@@ -49,7 +62,7 @@ Cada jefe tiene su propia voz y una mecánica única:
 
 ## Técnica
 
-Sin dependencias ni archivos de audio: todo el sonido (voces de criaturas, efectos y música generativa por zona) se sintetiza con la Web Audio API. Basta con abrir `index.html` en un navegador moderno (o servir la carpeta con cualquier servidor estático). El progreso se guarda en `localStorage`, y las partidas de la versión anterior se migran automáticamente.
+Sin dependencias ni archivos de audio: todo el sonido (voces de criaturas, efectos y música generativa por zona) se sintetiza con la Web Audio API. Basta con abrir `index.html` en un navegador moderno (o servir la carpeta con cualquier servidor estático). Sin cuenta, el progreso se guarda en `localStorage` (y las partidas de la versión anterior se migran automáticamente). Con cuenta, se guarda en Firebase (plan gratuito Spark); las reglas de seguridad están en `firebase/firestore.rules`.
 
 ```
 index.html     Pantallas y capas
@@ -64,5 +77,9 @@ js/input.js    Teclado y combinaciones
 js/combat.js   Motor de combate y mecánicas de jefes
 js/tutorial.js Entrenamiento
 js/ui.js       Pantallas, diálogos, listas, opciones y HUD
+js/config.js   Configuración del modo online (Firebase)
+js/cloud.js    Servicio online: cuentas, guardado, duelos, diario, panel
+js/online.js   Pantallas online: cuenta, comunidad, duelos, privacidad, panel
 js/app.js      Flujo del juego
+firebase/      Reglas de seguridad de Firestore
 ```

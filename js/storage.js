@@ -55,6 +55,19 @@ const Storage = {
         this._set(this.LAST, p.username);
     },
     deleteProfile(name) { this._del(this.profileKey(name)); },
+
+    // Copia local de la partida online (por si se corta la conexión).
+    cloudKey(uid) { return 'aethelgard_cloud_' + uid; },
+    saveCloudCache(uid, p) { this._set(this.cloudKey(uid), JSON.stringify(p)); },
+    loadCloudCache(uid) { const r = this._json(this._get(this.cloudKey(uid))); return r ? migrateProfile(r) : null; },
+    deleteCloudCache(uid) { this._del(this.cloudKey(uid)); },
+
+    /** Borra todo lo que el juego guardó en este navegador. */
+    clearAll() {
+        try {
+            Object.keys(localStorage).filter(k => k.startsWith('aethelgard_')).forEach(k => localStorage.removeItem(k));
+        } catch (_) { /* sin almacenamiento */ }
+    },
     lastUser() { return this._get(this.LAST) || ''; },
 
     listProfiles() {
@@ -87,6 +100,10 @@ function newProfile(username) {
         },
         arena: { bestScore: 0, bestWave: 0, games: 0 },
         storyScore: 0,
+        // Online
+        friends: [], duels: { wins: 0, losses: 0, draws: 0 },
+        dailyDays: [], dailyBest: { day: '', score: 0 },
+        customAch: [], adminEditAt: 0,
     };
 }
 
@@ -99,7 +116,9 @@ function migrateProfile(raw) {
         p.story.routeProgress = { fire: 0, water: 0, wind: 0, earth: 0, ...(raw.story?.routeProgress || {}) };
         p.stats = { ...newProfile('').stats, ...(raw.stats || {}) };
         p.arena = { ...newProfile('').arena, ...(raw.arena || {}) };
-        ['echosSeen', 'loreSeen', 'achievements', 'bossesDefeated', 'met'].forEach(k => {
+        p.duels = { ...newProfile('').duels, ...(raw.duels || {}) };
+        p.dailyBest = { ...newProfile('').dailyBest, ...(raw.dailyBest || {}) };
+        ['echosSeen', 'loreSeen', 'achievements', 'bossesDefeated', 'met', 'friends', 'dailyDays', 'customAch'].forEach(k => {
             if (!Array.isArray(p[k])) p[k] = [];
         });
         return p;

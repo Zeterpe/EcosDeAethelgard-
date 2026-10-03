@@ -76,14 +76,34 @@ const UI = {
         let label = el.getAttribute('aria-label') || '';
         if (!label) {
             if (el.tagName === 'INPUT') {
-                const l = document.querySelector(`label[for="${el.id}"]`);
-                label = `${l ? l.textContent.trim() : ''}, cuadro de texto${el.value ? ': ' + el.value : ', vacío'}`;
+                const l = (el.id && document.querySelector(`label[for="${el.id}"]`)) || el.closest('label');
+                const name = l ? l.textContent.replace(/\s+/g, ' ').trim() : '';
+                if (el.type === 'checkbox') label = `${name}, casilla, ${el.checked ? 'marcada' : 'sin marcar'}. Espacio para cambiar`;
+                else if (el.type === 'password') label = `${name}, campo de contraseña${el.value ? `, ${plural(el.value.length, 'carácter', 'caracteres')}` : ', vacío'}`;
+                else label = `${name}, cuadro de texto${el.value ? ': ' + el.value : ', vacío'}`;
             } else label = el.textContent.replace(/\s+/g, ' ').trim();
         }
         if (role === 'slider') label += `: ${el.getAttribute('aria-valuetext')}`;
         if (role === 'switch') label += `: ${el.getAttribute('aria-checked') === 'true' ? 'activado' : 'desactivado'}`;
         if (el.dataset.desc) label += `. ${el.dataset.desc}`;
         return label;
+    },
+
+    /** Eco de teclado para quien juega sin lector de pantalla. */
+    echoKey(e) {
+        const el = e.target;
+        if (this.settings.output !== 'tts' || !el || el.tagName !== 'INPUT' || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (el.type === 'checkbox') {
+            if (e.key === ' ') setTimeout(() => this.say(el.checked ? 'Marcada' : 'Sin marcar'), 0);
+            return;
+        }
+        if (el.type === 'password') {
+            if (e.key.length === 1) this.audio.uiMove();
+            else if (e.key === 'Backspace') this.say(el.value ? 'borrado' : 'vacío');
+            return;
+        }
+        if (e.key.length === 1) this.say(e.key === ' ' ? 'espacio' : e.key === '@' ? 'arroba' : e.key === '.' ? 'punto' : e.key);
+        else if (e.key === 'Backspace') this.say(el.value ? `${el.value.slice(-1)} borrada` : 'vacío');
     },
 
     navItems(container) {
@@ -143,7 +163,7 @@ const Dialog = {
      * buttons: [{ label, desc, value, action, keep }]
      * cancel: valor devuelto con Escape (undefined = Escape no cierra)
      */
-    open({ title, text = '', speak = null, buttons, cancel = undefined, focusIndex = 0 }) {
+    open({ title, text = '', speak = null, buttons, cancel = undefined, focusIndex = 0, fields = null }) {
         if (this.active) this.close(this._cancel);
         return new Promise(resolve => {
             this._resolve = resolve;
@@ -157,6 +177,27 @@ const Dialog = {
                 p.textContent = line;
                 textEl.appendChild(p);
             });
+            this._fields = fields || null;
+            if (fields) {
+                const wrap = document.createElement('div');
+                wrap.className = 'form-group dialog-fields';
+                fields.forEach((f, i) => {
+                    const id = `dlg-field-${i}`;
+                    const lab = document.createElement('label');
+                    lab.setAttribute('for', id);
+                    lab.textContent = f.label;
+                    const inp = document.createElement('input');
+                    inp.id = id;
+                    inp.type = f.type || 'text';
+                    inp.value = f.value ?? '';
+                    inp.autocomplete = f.autocomplete || 'off';
+                    if (f.maxlength) inp.maxLength = f.maxlength;
+                    inp.dataset.nav = '';
+                    inp.dataset.field = f.id;
+                    wrap.append(lab, inp);
+                });
+                textEl.appendChild(wrap);
+            }
             const box = $('dialog-buttons');
             box.innerHTML = '';
             buttons.forEach(b => {
@@ -168,17 +209,26 @@ const Dialog = {
                 btn.addEventListener('click', () => {
                     UI.audio.uiSelect();
                     if (b.action) b.action();
+                    if (b.submit) { this.close(this.fieldValues()); return; }
                     if (!b.keep) this.close(b.value);
                 });
+                if (b.submit) btn.dataset.submit = '';
                 box.appendChild(btn);
             });
             $('dialog').hidden = false;
             this.active = true;
             // Con lector de pantalla, el propio lector lee el diálogo (aria-describedby) al recibir el foco.
             if (UI.settings.output === 'tts') UI.say(`${title}. ${speak ?? String(text).replace(/\n/g, ' ')}`.trim());
+            const first = fields ? UI.navItems(textEl)[0] : null;
             const btns = UI.navItems(box);
-            UI.focus(btns[focusIndex] || btns[0], { polite: true });
+            UI.focus(first || btns[focusIndex] || btns[0], { polite: true });
         });
+    },
+
+    fieldValues() {
+        const out = {};
+        $('dialog-text').querySelectorAll('[data-field]').forEach(inp => { out[inp.dataset.field] = inp.value; });
+        return out;
     },
 
     close(value) {
@@ -193,17 +243,25 @@ const Dialog = {
     },
 
     onKey(e) {
-        const box = $('dialog-buttons');
-        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); UI.moveFocus(1, box); return true; }
-        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); UI.moveFocus(-1, box); return true; }
-        if (e.key === 'Tab') { e.preventDefault(); UI.moveFocus(e.shiftKey ? -1 : 1, box); return true; }
+        const box = $('dialog-buttons'), panel = $('dialog');
+        const inInput = e.target?.tagName === 'INPUT';
+        UI.echoKey(e);
+        if (e.key === 'ArrowDown' || (!inInput && e.key === 'ArrowRight')) { e.preventDefault(); UI.moveFocus(1, panel); return true; }
+        if (e.key === 'ArrowUp' || (!inInput && e.key === 'ArrowLeft')) { e.preventDefault(); UI.moveFocus(-1, panel); return true; }
+        if (e.key === 'Tab') { e.preventDefault(); UI.moveFocus(e.shiftKey ? -1 : 1, panel); return true; }
+        if (e.key === 'Enter' && inInput) {
+            e.preventDefault();
+            box.querySelector('[data-submit]')?.click();
+            return true;
+        }
         if (e.key === 'Escape') {
             e.preventDefault();
             if (this._cancel !== undefined) { UI.audio.uiBack(); this.close(this._cancel); }
             return true;
         }
         if (e.key === 'Enter' || e.key === ' ') {
-            if (!box.contains(document.activeElement)) {
+            if (inInput) return true;
+            if (!panel.contains(document.activeElement)) {
                 e.preventDefault();
                 UI.focus(UI.navItems(box)[0]);
             }

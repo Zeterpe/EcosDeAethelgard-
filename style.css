@@ -61,6 +61,11 @@ body {
     padding: 0 16px;
 }
 
+/* «hidden» siempre oculta, aunque la clase defina otro display. */
+[hidden] {
+    display: none !important;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -278,6 +283,47 @@ body {
     padding-top: 1rem;
     width: 100%;
     max-width: 420px;
+}
+
+label.check {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+label.check input {
+    width: 1.4rem;
+    height: 1.4rem;
+    accent-color: var(--accent);
+}
+
+.form-group .section-title {
+    margin: 0;
+}
+
+.form-group .menu-btn.small {
+    align-self: stretch;
+}
+
+.motd {
+    max-width: 520px;
+    background: #241d0a;
+    border: 2px solid var(--accent-dim);
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.admin-btn {
+    border-color: var(--danger);
+}
+
+.dialog-fields {
+    margin-top: 0.8rem;
+    max-width: none;
 }
 
 /* ── Listas genéricas ───────────────────────── */

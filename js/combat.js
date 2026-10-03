@@ -67,7 +67,7 @@ function buildBag({ count, pool, elite = 0, ensure = [] }) {
     const elites = pool.filter(id => ENEMIES[id].tier === 'elite');
     const bag = [];
     for (let i = 0; i < count; i++) {
-        const useElite = elites.length > 0 && (basics.length === 0 || Math.random() < elite);
+        const useElite = elites.length > 0 && (basics.length === 0 || rand() < elite);
         bag.push(makeInstance(pick(useElite ? elites : basics)));
     }
     let slot = 0;
@@ -140,7 +140,7 @@ const MECHANICS = {
         }],
         prepare(api, inst, turn) {
             const p = inst.st.phase >= 2 ? 0.4 : 0.3;
-            if (!inst.st.lastShield && inst.st.turns >= 1 && Math.random() < p) {
+            if (!inst.st.lastShield && inst.st.turns >= 1 && rand() < p) {
                 turn.shield = true;
                 turn.warning = '¡Rok alza su escudo de piedra! No ataques.';
                 turn.reactOverride = CFG.SHIELD_MS;
@@ -402,7 +402,7 @@ class CombatEngine {
         const bag = this.#bag;
         const boss = bag.find(i => BOSS_TIERS.includes(i.def.tier));
         if (boss && bag.length > 1) {
-            if (Math.random() < 0.45 && boss.uid !== this.#lastUid) return boss;
+            if (rand() < 0.45 && boss.uid !== this.#lastUid) return boss;
             return pick(bag.filter(i => i !== boss));
         }
         let cands = bag;
@@ -470,7 +470,7 @@ class CombatEngine {
             return { dur, extraMs: delay * 1000 };
         }
         if (turn.decoys) {
-            const seq = shuffle([...turn.decoys.map(d => ({ d, far: true })), { d: turn.dir, far: false }]);
+            const seq = turn.decoySeq || (turn.decoySeq = shuffle([...turn.decoys.map(d => ({ d, far: true })), { d: turn.dir, far: false }]));
             let dur = 0;
             seq.forEach((s, i) => { dur = Math.max(dur, a.playVoice(turn.voice, s.d, { delay: i * 0.75, far: s.far })); });
             return { dur, extraMs: (seq.length - 1) * 750 };
@@ -795,6 +795,11 @@ class CombatEngine {
             }
         }
         this.#d.onEvent?.('wave', { wave: w });
+        if (enc.maxWave && w >= enc.maxWave) {
+            // Partida de oleadas contadas (duelos): termina con victoria.
+            this.#victory(gen, `¡Oleada ${w} superada! Has completado las ${w} oleadas.`);
+            return;
+        }
         this.#wave++;
         this.#bag = enc.makeBag(this.#wave);
         this.#d.audio.levelComplete();
