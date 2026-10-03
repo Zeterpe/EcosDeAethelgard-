@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════
+// ECOS DE AETHELGARD — reglas de seguridad de Firestore
+//
+// · Cada jugador solo puede escribir sus propios datos.
+// · Solo los jugadores registrados ven a los demás jugadores.
+// · El «control de dios» es exclusivo de quien tenga un documento
+//   en la colección admins/{uid}. Esa colección NO se puede escribir
+//   desde el juego: solo desde la consola de Firebase.
+// ═══════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    // Campos de la ficha pública que solo puede tocar el creador.
+    function adminFields() { return ['banned', 'customAch', 'adminEditAt']; }
+
+    // ── Creadores (solo lectura del propio documento) ──
+    match /admins/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    // ── Ficha pública de cada jugador (clasificaciones, perfiles) ──
+    match /players/{uid} {
+      allow read: if signedIn();
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && !request.resource.data.keys().hasAny(adminFields());
+      allow update: if isAdmin()
+        || (isOwner(uid)
+            && resource.data.get('banned', false) != true
+            && request.resource.data.uid == uid
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(adminFields().concat(['uid', 'nameLower'])));
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ── Partida guardada completa (privada) ──
+    match /saves/{uid} {
+      allow read, write: if isOwner(uid) || isAdmin();
+    }
+
+    // ── Nombres únicos ──
+    match /names/{nameLower} {
+      allow read: if true;   // para comprobar si un nombre está libre antes de registrarse
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // ── Duelos entre jugadores ──
+    match /challenges/{id} {
+      allow read: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid || isAdmin());
+      allow create: if signedIn()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid != request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.toUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['toScore', 'toWave', 'status', 'finishedAt']))
+        || (signedIn() && resource.data.fromUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fromSeen']));
+      allow delete: if signedIn()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid || isAdmin());
+    }
+
+    // ── Desafío diario ──
+    match /daily/{day}/scores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid) && request.resource.data.uid == uid;
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ── Logros creados por el creador ──
+    match /customAchievements/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Avisos del creador (mensaje del día) ──
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
