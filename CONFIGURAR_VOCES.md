@@ -46,7 +46,18 @@ Microsoft ha cambiado varias veces el nombre de este servicio (Speech, Servicios
 ### Si tienes Azure for Students
 
 - No hace falta tarjeta y el plan **Free F0** sigue siendo gratis: no gasta tu crédito de estudiante.
-- Las cuentas de estudiante solo pueden crear recursos en **algunas regiones**. Si al crear sale un error como *RequestDisallowedByAzure* o «no se permite la ubicación», mira cuáles tienes permitidas: en el portal, **Suscripciones** → tu suscripción → **Directivas** (Policies) → la directiva «Allowed resource deployment regions». Vuelve al enlace directo y elige una de esas regiones (las europeas suenan igual de bien: las voces son las mismas en todas).
+- Las cuentas de estudiante solo pueden crear recursos en **unas pocas regiones** (normalmente cinco, distintas para cada persona). Si al crear sale un error como *RequestDisallowedByAzure* o «no se permite la ubicación», averigua las tuyas así:
+  1. En la barra de arriba del portal, pulsa el icono de **Cloud Shell** (`>_`).
+  2. Elige **Bash**. Si pregunta por el almacenamiento, elige **No se requiere ninguna cuenta de almacenamiento**, selecciona tu suscripción y pulsa **Aplicar**.
+  3. Pega esta línea y pulsa Enter:
+
+     ```bash
+     az policy assignment show --name sys.regionrestriction --query "parameters.listOfAllowedLocations.value" -o tsv
+     ```
+
+  4. Saldrá la lista de tus regiones permitidas, por ejemplo `swedencentral`, `francecentral`, `italynorth`… Vuelve al enlace directo y elige una de ellas en **Región** (`swedencentral` aparece como «Sweden Central»). Las voces son las mismas en todas.
+
+  También se ve en el portal: **Directiva** (Policy) → **Asignaciones** → «Allowed resource deployment regions» → **Ver asignación** → pestaña **Parámetros** → *Allowed locations*. En algunas cuentas esa pestaña sale vacía; por eso es más fiable Cloud Shell.
 - Si sale un error de que la suscripción «no está registrada» para *Microsoft.CognitiveServices*: **Suscripciones** → tu suscripción → **Proveedores de recursos** → busca `Microsoft.CognitiveServices` → **Registrar**, espera un par de minutos y vuelve a intentarlo.
 
 ## 3. Guardar la clave en GitHub (como secreto)
