@@ -26,6 +26,7 @@ const App = (() => {
         narrate: (lines, o) => Narration.run(lines, o),
         onEvent: (type, data) => onCombatEvent(type, data),
         onPauseRequest: () => openPause(),
+        onToggleAnnounce: () => toggleAnnounce(),
     });
 
     const tutorial = new Tutorial({
@@ -51,7 +52,7 @@ const App = (() => {
     // ═══════════════════════════════════════════════════
 
     function unlock() {
-        if (audio.ready) { audio.resume(); return; }
+        if (audio.ready) { audio.resume(); narrator.recover(); return; }
         if (audio.init()) music.resumePending();
         speech.unlock();
     }
@@ -71,7 +72,10 @@ const App = (() => {
             else if (e.key === 'Escape' || e.key === ' ' || e.key.startsWith('Arrow')) e.preventDefault();
             return;
         }
-        if (scr === 'options' && OptionsScreen.onKey(e)) return;
+        if (scr === 'options') {
+            if (narrator.playing) narrator.skipAll();   // cualquier tecla corta la muestra de la historia
+            if (OptionsScreen.onKey(e)) return;
+        }
         if (scr === 'list' && ListScreen.onKey(e)) return;
         if (scr === 'route' && routeKey(e)) return;
         if (scr === 'login' || scr === 'account') UI.echoKey(e);
@@ -407,6 +411,7 @@ const App = (() => {
             buttons: [
                 { label: 'Continuar', value: 'resume' },
                 { label: 'Escuchar los controles', keep: true, action: () => speech.say(controlsText()) },
+                { label: announceLabel(), keep: true, action: btn => { toggleAnnounce(); btn.textContent = announceLabel(); } },
                 { label: enc?.practice ? 'Terminar la práctica' : 'Abandonar y volver', value: 'quit', desc: quitDesc },
             ],
             cancel: 'resume',
@@ -416,11 +421,28 @@ const App = (() => {
         else { UI.focus($('combat-stage'), { silent: true }); combat.resume(); }
     }
 
+    function announceLabel() {
+        return settings.verbosity === 'sonido' ? 'Activar los anuncios de enemigos (tecla V)' : 'Desactivar los anuncios de enemigos (tecla V)';
+    }
+
+    /** Tecla V: apaga o enciende la voz que dice qué criatura viene y por dónde. */
+    function toggleAnnounce() {
+        if (settings.verbosity === 'sonido') {
+            settings.verbosity = settings.verbosityPrev && settings.verbosityPrev !== 'sonido' ? settings.verbosityPrev : 'normal';
+            speech.say('Anuncios de enemigos activados.');
+        } else {
+            settings.verbosityPrev = settings.verbosity;
+            settings.verbosity = 'sonido';
+            speech.say('Anuncios de enemigos desactivados: solo oirás a las criaturas. Espacio te dice cuál es, y la V los vuelve a activar.');
+        }
+        Storage.saveSettings(settings);
+    }
+
     function controlsText() {
         const k = input.scheme.spoken;
         return `Elementos: ${k.agua}, Agua. ${k.fuego}, Fuego. ${k.tierra}, Tierra. ${k.viento}, Viento. ` +
             `Pulsa el elemento y luego la flecha hacia el enemigo. Para un dúo, dos elementos a la vez y la flecha. ` +
-            `Espacio repite el enemigo. Enter dice tu estado. H da una pista. Escape pausa.`;
+            `Espacio repite el enemigo. Enter dice tu estado. H da una pista. V activa o desactiva los anuncios de enemigos. Escape pausa.`;
     }
 
     async function afterDefeat(retry, title) {
@@ -445,13 +467,20 @@ const App = (() => {
         for (const id of ids) {
             const def = ENEMIES[id];
             if (!profile.met.includes(id)) profile.met.push(id);
+            const loreKey = `creature_${id}`;
+            const tellLore = LORE.creatures[id] && !profile.loreSeen.includes(loreKey);
+            if (tellLore) profile.loreSeen.push(loreKey);
             save();
-            await Narration.run([`¡Nueva criatura! ${def.name}. ${def.desc} Escucha.`], { title: 'Bestiario' });
+            if (tellLore) {
+                await Narration.run(LORE.creatures[id], { title: def.name, gap: 600, key: loreKey });
+                if (!alive()) return false;
+            }
+            await Narration.run([STORY_LINES.meetName(def)], { title: 'Bestiario', key: `meet_${id}_1` });
             if (!alive()) return false;
             audio.playVoice(def.voice, 'center');
             await sleep(1900);
             if (!alive()) return false;
-            await Narration.run([`${weaknessText(profileOf(def))} Nunca uses ${elementNames(def.cure)}: la curarías. Escucha otra vez.`], { title: def.name });
+            await Narration.run([STORY_LINES.meetWeak(def)], { title: def.name, key: `meet_${id}_2` });
             if (!alive()) return false;
             audio.playVoice(def.voice, 'center');
             await sleep(1900);
@@ -462,10 +491,83 @@ const App = (() => {
     }
 
     // ═══════════════════════════════════════════════════
+    // Crónicas, leyendas y encuentros
+    // ═══════════════════════════════════════════════════
+
+    const ROMAN = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI' };
+
+    function chronicleTitle(n) {
+        const t = LORE.chronicles.titles[n];
+        return n === 'epilogue' ? t : `Crónica ${ROMAN[n]}: ${t}`;
+    }
+
+    function markLore(id) {
+        if (!profile.loreSeen.includes(id)) { profile.loreSeen.push(id); save(); }
+    }
+
+    function playChronicle(n) {
+        markLore(`chron_${n}`);
+        if (n !== 'epilogue' && n !== 6) music.play('menu', { intensity: 1 });
+        return Narration.run(LORE.chronicles[n], { title: chronicleTitle(n), gap: 700, key: `chron_${n}` });
+    }
+
+    function playLegend(r) {
+        markLore(`legend_${r}`);
+        return Narration.run(LORE.bosses[r].legend, { title: LORE.bosses[r].legendTitle, gap: 700, key: `route_${r}_legend` });
+    }
+
+    function playEncounter(r) {
+        markLore(`encounter_${r}`);
+        return Narration.run(LORE.bosses[r].encounter, { title: ENEMIES[ROUTES[r].boss].name, gap: 700, key: `route_${r}_encounter` });
+    }
+
+    /** Capítulos que ya le corresponderían por su progreso y aún no ha escuchado (partidas anteriores a las Crónicas). */
+    function missedStory() {
+        const st = profile.story, heard = id => profile.loreSeen.includes(id);
+        const out = [];
+        for (const [lvl, n] of Object.entries(CHRONICLE_AT_END)) {
+            if (st.level > +lvl && !heard(`chron_${n}`)) out.push(() => playChronicle(n));
+        }
+        for (const r of ROUTE_IDS) {
+            const done = st.routesDone.includes(r), prog = st.routeProgress[r] || 0;
+            if ((done || prog > LEGEND_AT_ROUTE_LEVEL) && !heard(`legend_${r}`)) out.push(() => playLegend(r));
+            if (done && !heard(`encounter_${r}`)) out.push(() => playEncounter(r));
+        }
+        if (st.finalDone && !heard('chron_6')) out.push(() => playChronicle(6));
+        if (st.finalDone && !heard('chron_epilogue')) out.push(() => playChronicle('epilogue'));
+        return out;
+    }
+
+    let missedOffered = false;
+    /** Una vez por sesión, ofrece escuchar lo que se perdió. Devuelve false si se ha navegado a otra parte. */
+    async function offerMissedStory() {
+        const missed = missedStory();
+        if (!missed.length || missedOffered) return true;
+        missedOffered = true;
+        const alive = newFlow();
+        const c = await Dialog.open({
+            title: 'Nuevos capítulos de la historia',
+            text: `La historia ha crecido: hay ${plural(missed.length, 'capítulo', 'capítulos')} de lo que ya has jugado que aún no has escuchado. ` +
+                '¿Quieres escucharlos ahora? Si no, estarán en Biblioteca, Archivo de ecos, y la historia de cada criatura, en el Bestiario.',
+            buttons: [{ label: 'Escucharlos ahora', value: 'yes' }, { label: 'Ahora no, ir a jugar', value: 'no' }],
+            cancel: 'no',
+        });
+        if (!alive()) return false;
+        if (c !== 'yes') return true;
+        for (const play of missed) {
+            const ok = await play();
+            if (!alive()) return false;
+            if (!ok) break;      // Escape salta el resto
+        }
+        return alive();
+    }
+
+    // ═══════════════════════════════════════════════════
     // Historia: niveles 1–30
     // ═══════════════════════════════════════════════════
 
     async function startStory() {
+        if (!await offerMissedStory()) return;
         const st = profile.story;
         if (st.level > COMMON_LEVELS) { showRouteSelect(); return; }
         if (st.level === 1 && !profile.tutorialDone && !profile.introSeen) {
@@ -527,12 +629,7 @@ const App = (() => {
         }
         if (!await introduceEnemies(def.pool.filter(id => !profile.met.includes(id)), alive)) return;
 
-        const count = def.count + (def.miniboss ? 1 : 0);
-        let intro = `Nivel ${n}. `;
-        if (mod) intro += `${mod.name}: ${mod.desc} `;
-        if (def.miniboss) intro += 'La Sombra Imitadora acecha entre los enemigos. ';
-        intro += `${plural(count, 'enemigo', 'enemigos')}. ¡Prepárate!`;
-        await Narration.run([intro], { title: `Nivel ${n}` });
+        await Narration.run([STORY_LINES.campaignIntro(n)], { title: `Nivel ${n}`, key: `level_${n}` });
         if (!alive()) return;
 
         const result = await runEncounter(campaignEncounter(n));
@@ -560,12 +657,19 @@ const App = (() => {
             showRouteSelect();
             return;
         }
+        const chron = CHRONICLE_AT_END[n];
+        const newPage = chron && !profile.loreSeen.includes(`chron_${chron}`);
         const c = await Dialog.open({
-            title: `Nivel ${n} superado`, text: resultLines(result),
+            title: `Nivel ${n} superado`,
+            text: resultLines(result) + (newPage ? '\nHas encontrado una página de las Crónicas de los Antiguos Ecos.' : ''),
             buttons: [{ label: `Continuar al nivel ${n + 1}`, value: 'next' }, { label: 'Volver al menú', value: 'menu' }],
             cancel: 'menu',
         });
         if (!alive()) return;
+        if (newPage) {
+            await playChronicle(chron);
+            if (!alive()) return;
+        }
         if (c === 'next') playCampaignLevel(n + 1); else goMenu();
     }
 
@@ -672,7 +776,7 @@ const App = (() => {
         music.play(R.theme, { intensity: 1 });
         audio.setReverb(R.reverb);
         if (!await introduceEnemies(def.pool.filter(id => !profile.met.includes(id)), alive)) return;
-        await Narration.run([`Ruta de ${R.name}, nivel ${n} de ${ROUTE_LEVELS}. ${mod ? `${mod.name}: ${mod.desc} ` : ''}${plural(def.count, 'enemigo', 'enemigos')}.`], { title });
+        await Narration.run([STORY_LINES.routeIntro(r, n)], { title, key: `route_${r}_${n}` });
         if (!alive()) return;
         const result = await runEncounter({
             kind: 'route', title, theme: R.theme, reverb: R.reverb,
@@ -693,12 +797,18 @@ const App = (() => {
         const next = n === ROUTE_LEVELS
             ? { label: `Enfrentarte a ${boss.short}`, value: 'next', desc: boss.name }
             : { label: `Continuar al nivel ${n + 1}`, value: 'next' };
+        const legend = n === LEGEND_AT_ROUTE_LEVEL && !profile.loreSeen.includes(`legend_${r}`);
         const c = await Dialog.open({
-            title: `${R.place}: nivel ${n} superado`, text: resultLines(result),
+            title: `${R.place}: nivel ${n} superado`,
+            text: resultLines(result) + (legend ? `\nHas encontrado una leyenda de ${R.guardian}.` : ''),
             buttons: [next, { label: 'Volver al mapa de rutas', value: 'routes' }, { label: 'Volver al menú', value: 'menu' }],
             cancel: 'menu',
         });
         if (!alive()) return;
+        if (legend) {
+            await playLegend(r);
+            if (!alive()) return;
+        }
         if (c === 'next') { if (n === ROUTE_LEVELS) playGuardian(r); else playRouteLevel(r, n + 1); }
         else if (c === 'routes') showRouteSelect(r);
         else goMenu();
@@ -711,6 +821,10 @@ const App = (() => {
         music.play(R.theme, { intensity: 1 });
         audio.setReverb(R.reverb);
         if (!profile.met.includes(def.id)) { profile.met.push(def.id); save(); }
+        if (!profile.loreSeen.includes(`encounter_${r}`)) {
+            await playEncounter(r);
+            if (!alive()) return;
+        }
         await Narration.run(LORE_EXTRA.bossMechanics[r], { title: def.name, key: `mech_${r}` });
         if (!alive()) return;
         audio.playVoice(def.voice, 'center');
@@ -756,6 +870,10 @@ const App = (() => {
         music.play('final', { intensity: 1 });
         audio.setReverb('cave');
         if (!profile.met.includes('final_boss')) { profile.met.push('final_boss'); save(); }
+        if (!profile.loreSeen.includes('chron_6')) {
+            await playChronicle(6);
+            if (!alive()) return;
+        }
         await Narration.run(LORE.finalBoss.intro, { title: 'Avatar del Silencio', pitch: 0.6, gap: 700, key: 'final_intro' });
         if (!alive()) return;
         await Narration.run(LORE_EXTRA.bossMechanics.final, { title: 'Advertencia', key: 'mech_final' });
@@ -777,6 +895,10 @@ const App = (() => {
         unlockAch('final_boss');
         if (settings.difficulty === 'archimago') unlockAch('archimago');
         save();
+        if (!profile.loreSeen.includes('chron_epilogue')) {
+            await playChronicle('epilogue');
+            if (!alive()) return;
+        }
         await Narration.run(LORE_EXTRA.credits, { title: 'Fin', key: 'credits' });
         if (!alive()) return;
         await Dialog.open({
@@ -1006,12 +1128,18 @@ const App = (() => {
             buttons: [
                 { label: 'Escuchar', keep: true, action: () => audio.playVoice(d.voice, 'center') },
                 { label: 'Escuchar en las cuatro posiciones', keep: true, action: () => playAllDirections(d.voice) },
+                ...(LORE.creatures[id] && profile.met.includes(id) ? [{ label: 'Escuchar su historia', value: 'lore' }] : []),
                 { label: 'Practicar contra esta criatura', value: 'practice' },
                 { label: 'Volver', value: 'back' },
             ],
             cancel: 'back',
         });
         if (c === 'practice') startPractice(d.name, [id]);
+        else if (c === 'lore') {
+            markLore(`creature_${id}`);
+            await Narration.run(LORE.creatures[id], { title: d.name, gap: 600, key: `creature_${id}` });
+            if (UI.current === 'list') bestiaryDetail(id);
+        }
     }
 
     function openGrimoire() {
@@ -1063,19 +1191,36 @@ const App = (() => {
 
     function openArchive() {
         const items = [];
-        const echoOrder = ['1', '10', '15_shadow', '20', '25_shadow', '30'];
-        echoOrder.filter(k => profile.echosSeen.includes(k)).forEach(k => items.push({
-            label: LORE_EXTRA.echoTitles[k], sub: 'Eco', icon: k.includes('shadow') ? '🌑' : '📜',
-            action: () => Narration.run(LORE.echos[k], { title: LORE_EXTRA.echoTitles[k], pitch: k.includes('shadow') ? 0.5 : 1, key: `echo_${k}` }),
-        }));
-        ROUTE_IDS.forEach(r => {
-            const R = ROUTES[r];
-            if (profile.loreSeen.includes(`pre_${r}`)) items.push({ label: R.place, sub: `La historia de ${R.guardian}`, icon: R.icon, action: () => Narration.run(LORE.bosses[r].preRoute, { title: R.place, key: `route_${r}_pre` }) });
-            if (profile.story.routesDone.includes(r)) items.push({ label: `Purificación: ${ENEMIES[R.boss].name}`, sub: 'Victoria', icon: '🕊️', action: () => Narration.run(LORE.bosses[r].victory, { title: 'Purificación', key: `route_${r}_victory` }) });
+        const st = profile.story, heard = id => profile.loreSeen.includes(id);
+        // Las crónicas y leyendas aparecen en cuanto el progreso las alcanza, aunque aún no se hayan escuchado.
+        const chronItem = n => ({
+            label: chronicleTitle(n), sub: heard(`chron_${n}`) ? 'Crónicas de los Antiguos Ecos' : 'Crónicas de los Antiguos Ecos · sin escuchar',
+            icon: '📖', action: () => playChronicle(n),
         });
-        if (profile.story.finalDone) {
+        const echoAfter = { '1': [], '10': [1], '15_shadow': [2], '20': [3], '25_shadow': [4], '30': [5] };
+        const echoOrder = ['1', '10', '15_shadow', '20', '25_shadow', '30'];
+        const chronOpen = n => heard(`chron_${n}`) || Object.entries(CHRONICLE_AT_END).some(([lvl, c]) => c === n && st.level > +lvl);
+        const listed = new Set();
+        echoOrder.forEach(k => {
+            for (const n of echoAfter[k]) if (chronOpen(n)) { items.push(chronItem(n)); listed.add(n); }
+            if (profile.echosSeen.includes(k)) items.push({
+                label: LORE_EXTRA.echoTitles[k], sub: 'Eco', icon: k.includes('shadow') ? '🌑' : '📜',
+                action: () => Narration.run(LORE.echos[k], { title: LORE_EXTRA.echoTitles[k], pitch: k.includes('shadow') ? 0.5 : 1, key: `echo_${k}` }),
+            });
+        });
+        [1, 2, 3, 4, 5].filter(n => !listed.has(n) && chronOpen(n)).forEach(n => items.push(chronItem(n)));
+        ROUTE_IDS.forEach(r => {
+            const R = ROUTES[r], done = st.routesDone.includes(r), prog = st.routeProgress[r] || 0;
+            if (profile.loreSeen.includes(`pre_${r}`)) items.push({ label: R.place, sub: `La historia de ${R.guardian}`, icon: R.icon, action: () => Narration.run(LORE.bosses[r].preRoute, { title: R.place, key: `route_${r}_pre` }) });
+            if (heard(`legend_${r}`) || done || prog > LEGEND_AT_ROUTE_LEVEL) items.push({ label: LORE.bosses[r].legendTitle, sub: `Leyenda de ${R.guardian}`, icon: '📖', action: () => playLegend(r) });
+            if (heard(`encounter_${r}`) || done) items.push({ label: `Encuentro: ${ENEMIES[R.boss].name}`, sub: 'Antes del combate', icon: R.icon, action: () => playEncounter(r) });
+            if (done) items.push({ label: `Purificación: ${ENEMIES[R.boss].name}`, sub: 'Victoria', icon: '🕊️', action: () => Narration.run(LORE.bosses[r].victory, { title: 'Purificación', key: `route_${r}_victory` }) });
+        });
+        if (heard('chron_6') || st.finalDone) items.push(chronItem(6));
+        if (st.finalDone) {
             items.push({ label: 'El Avatar del Silencio', sub: 'El encuentro final', icon: '👁️', action: () => Narration.run(LORE.finalBoss.intro, { title: 'Avatar del Silencio', pitch: 0.6, key: 'final_intro' }) });
             items.push({ label: 'Ecos Eternos', sub: 'El final', icon: '✨', action: () => Narration.run(LORE.finalBoss.victory, { title: 'Ecos Eternos', key: 'final_victory' }) });
+            items.push({ ...chronItem('epilogue'), sub: 'Crónicas de los Antiguos Ecos' });
         }
         ListScreen.open({
             title: 'Archivo de ecos', intro: items.length ? `Archivo de ecos. ${plural(items.length, 'grabación', 'grabaciones')}.` : 'Archivo de ecos. Aún no has escuchado ningún eco.',
@@ -1202,7 +1347,7 @@ const App = (() => {
             { t: 'Niveles especiales', x: 'Frenesí: los enemigos llegan más rápido. Niebla: no se anuncia la posición, solo la oyes. Élite: solo criaturas de dos elementos. En los niveles 15 y 25 acecha la Sombra Imitadora: imita a otras criaturas y debes responderle como a la criatura que imita.' },
             { t: 'Guardianes', x: 'Cada guardián tiene una mecánica propia. Ignar lanza brasas: apágalas con Agua. El Leviatán se desplaza antes de atacar: apunta a donde termina. Zael lanza ecos falsos y lejanos: apunta al grito cercano. Rok alza un escudo de piedra: cuando lo oigas, no ataques. El Avatar del Silencio cambia de elemento sin parar.' },
             { t: 'Modos de juego', x: 'Historia: treinta niveles, cuatro rutas con sus guardianes y un enemigo final. Arena: oleadas infinitas con récord. Práctica libre: sin vidas ni puntos. Entrenamiento: aprende paso a paso.' },
-            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
+            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. La historia tiene su propia velocidad, aparte de la del resto del juego. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
         ];
     }
 
@@ -1245,7 +1390,7 @@ const App = (() => {
                     completo: 'Nombre, posición y vidas de cada enemigo.',
                     normal: 'Nombre y posición, y vidas de las criaturas élite.',
                     breve: 'Nombre corto y posición.',
-                    sonido: 'Sin voz: solo el sonido de la criatura. Para expertos.',
+                    sonido: 'Solo sonido: la voz no dice qué criatura viene ni por dónde, ni la nombra al derrotarla. Para quien ya reconoce a las criaturas. En combate, la tecla V lo activa y desactiva.',
                 }[v]),
             },
             {
@@ -1265,9 +1410,14 @@ const App = (() => {
                 id: 'storyVoice', label: 'Voz de la historia', type: 'choice', values: ['grabada', 'sistema'],
                 labels: { grabada: 'Narradores grabados', sistema: 'Voz del sistema' },
                 desc: v => v === 'grabada'
-                    ? (narrator.available ? 'Cada personaje tiene su propia voz y sus efectos.' : 'Aún no se han generado los audios: mientras tanto se usa la voz del sistema.')
+                    ? (narrator.available ? 'Cada personaje tiene su propia voz y sus efectos.'
+                        : narrator.broken ? 'Este navegador no ha podido reproducir los audios: mientras tanto se usa la voz del sistema.'
+                            : 'Aún no se han generado los audios: mientras tanto se usa la voz del sistema.')
                     : 'La historia la lee la misma voz que el resto del juego.',
             },
+            { id: 'storyRate', label: 'Velocidad de la historia', type: 'range', min: 0.7, max: 1.5, step: 0.1, fmt: v => fmtDecimal(v) },
+            { id: 'storyTest', label: 'Escuchar la voz de la historia', type: 'action', run: () => testStory() },
+            { id: 'storyDiag', label: 'Comprobar la voz de la historia', type: 'action', run: () => diagnoseStory() },
             { id: 'test', label: 'Probar sonido y voz', type: 'action', run: () => testSound() },
             { id: 'reset', label: 'Borrar el progreso de este invocador', type: 'action', danger: true, run: () => confirmReset() },
         ];
@@ -1278,6 +1428,39 @@ const App = (() => {
         audio.applySettings();
         if (def.id === 'keyScheme') CombatView.updateKeyLabels(input.scheme);
         document.body.classList.toggle('no-visual', !settings.visualAids);
+    }
+
+    function testStory() {
+        speech.cancel();
+        if (settings.storyVoice !== 'sistema' && narrator.preview()) return;
+        speech.say('Así sonará la historia. Escucha: el Silencio se acerca, y solo tu voz puede despertar los ecos.', { rate: settings.storyRate });
+    }
+
+    /** Dice, paso a paso, si la narración grabada puede sonar aquí (y por qué no). */
+    async function diagnoseStory() {
+        speech.say('Comprobando la voz de la historia…');
+        const r = await narrator.diagnose();
+        const lines = [`Versión del juego: ${GAME_VERSION.spoken} (${GAME_VERSION.id}).`];
+        if (settings.storyVoice === 'sistema') lines.push('Tienes elegida la voz del sistema para la historia: cámbiala a Narradores grabados.');
+        if (!r.manifest) {
+            lines.push(`No se encuentra la lista de audios de la narración${r.manifestStatus ? ` (respuesta: ${r.manifestStatus})` : ''}. La historia se lee con la voz del sistema.`);
+        } else {
+            lines.push(`Narración grabada encontrada: ${plural(r.paragraphs, 'párrafo', 'párrafos')}.`);
+            if (r.http && r.http !== 200) lines.push(`El servidor no entrega los audios (error ${r.http}). Mientras tanto, la historia se lee con la voz del sistema.`);
+            else if (r.error) lines.push(`No se pudo cargar un audio de prueba: ${r.error}. Mientras tanto, la historia se lee con la voz del sistema.`);
+            else if (r.seconds) lines.push(`Audio de prueba descargado y leído: ${fmtDecimal(r.seconds)} segundos.`);
+            lines.push(r.running ? 'El sonido del juego está activo.' : `El sonido del juego está detenido (${r.sound}). Toca la pantalla o pulsa una tecla y vuelve a probar.`);
+            if (r.broken) lines.push(`Antes falló varias veces y se pasó a la voz del sistema. Último error: ${r.lastError || 'desconocido'}.`);
+        }
+        const ok = r.manifest && r.seconds && r.running && !r.broken && settings.storyVoice !== 'sistema';
+        if (ok) lines.push('Todo correcto. Pulsa «Escuchar una muestra» y deberías oír al narrador.');
+        const c = await Dialog.open({
+            title: ok ? 'La voz de la historia funciona' : 'La voz de la historia tiene un problema',
+            text: lines.join('\n'),
+            buttons: [{ label: 'Escuchar una muestra', value: 'test' }, { label: 'Volver', value: 'back' }],
+            cancel: 'back',
+        });
+        if (c === 'test') testStory();
     }
 
     function testSound() {
@@ -1316,10 +1499,14 @@ const App = (() => {
         document.body.classList.toggle('no-visual', !settings.visualAids);
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', e => { if (UI.current === 'combat') input.keyup(e); });
+        // En iPhone (y con VoiceOver) solo cuentan como gesto el toque al soltar y el clic.
         document.addEventListener('pointerdown', unlock, { capture: true });
+        document.addEventListener('touchend', unlock, { capture: true, passive: true });
+        document.addEventListener('click', unlock, { capture: true });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && combat.active && !combat.paused) openPause();
             if (document.hidden) Cloud.flush();
+            else if (audio.ready) audio.resume();
         });
         window.addEventListener('pagehide', () => Cloud.flush());
         $('btn-go-online').addEventListener('click', () => { audio.uiSelect(); connectCloud(); });
@@ -1355,7 +1542,7 @@ const App = (() => {
         initSplash();
         initMenu();
         initRoutes();
-        console.info(`[Aethelgard] Versión ${GAME_VERSION} lista.`);
+        console.info(`[Aethelgard] Versión ${GAME_VERSION.id} lista.`);
     }
 
     return {

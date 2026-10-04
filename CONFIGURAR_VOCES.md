@@ -90,7 +90,7 @@ Si la ejecución sale en rojo, abre el paso que ha fallado: el mensaje dice qué
 
 ## Cambiar voces o textos
 
-- **Cambiar una voz**: edita el bloque `REPARTO` al principio de [`tools/generar-narracion.mjs`](tools/generar-narracion.mjs) (voz, velocidad, tono, pausa o efecto) y vuelve a lanzar **Generar narración**. Solo se regeneran los fragmentos de ese personaje.
+- **Cambiar una voz**: edita el bloque `REPARTO` al principio de [`tools/generar-narracion.mjs`](tools/generar-narracion.mjs) (voz, velocidad, tono, pausa entre frases, coma o efecto) y vuelve a lanzar **Generar narración**. Solo se regeneran los fragmentos de ese personaje.
 - **Cambiar la historia**: si editas un texto de `js/lore.js`, ese párrafo vuelve a la voz del sistema hasta que lances otra vez **Generar narración**. El juego nunca reproduce un audio que no coincida con el texto actual.
 - **Regenerarlo todo**: marca la casilla «Regenerar todos los audios» al lanzar la acción.
 
@@ -123,4 +123,4 @@ En **Opciones → Voz de la historia** cada uno elige:
 - **Narradores grabados**: las voces de Azure con sus efectos.
 - **Voz del sistema**: la misma voz que el resto del juego (o el lector de pantalla), por si alguien la prefiere más rápida.
 
-La velocidad de voz de las opciones también acelera o frena las grabaciones (sin cambiar el tono), y **Enter** salta un párrafo y **Escape** toda la narración, igual que antes.
+**Velocidad de la historia** acelera o frena solo las narraciones (sin cambiar el tono), aparte de la velocidad de voz del resto del juego, y **Escuchar la voz de la historia** pone unos segundos del narrador para probarla. **Enter** salta un párrafo y **Escape** toda la narración, igual que antes.

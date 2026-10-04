@@ -59,6 +59,7 @@ class InputSystem {
         if (e.key === ' ' || e.code === 'Space') return { kind: 'command', id: 'repeat' };
         if (e.key === 'Enter') return { kind: 'command', id: 'status' };
         if (k === 'h') return { kind: 'command', id: 'hint' };
+        if (k === 'v') return { kind: 'command', id: 'announce' };
         if (e.key === 'Escape' || k === 'p') return { kind: 'command', id: 'pause' };
         return null;
     }

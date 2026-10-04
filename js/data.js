@@ -5,7 +5,8 @@
    ============================================= */
 'use strict';
 
-const GAME_VERSION = '2.0';
+/** Versión del juego. Al publicar cambios, súbela también en los ?v= de index.html. */
+const GAME_VERSION = { id: '20261004a', spoken: '4 de octubre de 2026' };
 
 // ═══════════════════════════════════════════════════════
 // Elementos y ciclo elemental
@@ -276,6 +277,10 @@ const CAMPAIGN = [
 
 /** Ecos que suenan al COMENZAR un nivel. El eco 30 suena al superarlo. */
 const ECHO_AT_START = { 1: '1', 10: '10', 15: '15_shadow', 20: '20', 25: '25_shadow' };
+/** Páginas de las Crónicas de los Antiguos Ecos que se encuentran al SUPERAR un nivel. */
+const CHRONICLE_AT_END = { 5: 1, 10: 2, 15: 3, 20: 4, 25: 5 };
+/** En cada ruta, la leyenda del guardián suena al superar este nivel. */
+const LEGEND_AT_ROUTE_LEVEL = 3;
 
 /** Nivel de ruta (1..5). */
 function routeLevelDef(routeId, n) {
@@ -441,6 +446,28 @@ function fmtDuration(secs) {
     if (m > 0) parts.push(plural(m, 'minuto', 'minutos'));
     return parts.length ? parts.join(' y ') : 'menos de un minuto';
 }
+
+/**
+ * Frases fijas del modo historia. Las usan el juego y el generador de
+ * narración (tools/generar-narracion.mjs), así que se pueden grabar con
+ * la voz del narrador: si se cambian, hay que volver a generar las voces.
+ */
+const STORY_LINES = {
+    campaignIntro(n) {
+        const def = CAMPAIGN[n], mod = def.modifier ? MODIFIERS[def.modifier] : null;
+        const count = def.count + (def.miniboss ? 1 : 0);
+        let t = `Nivel ${n}. `;
+        if (mod) t += `${mod.name}: ${mod.desc} `;
+        if (def.miniboss) t += 'La Sombra Imitadora acecha entre los enemigos. ';
+        return t + `${plural(count, 'enemigo', 'enemigos')}. ¡Prepárate!`;
+    },
+    routeIntro(r, n) {
+        const R = ROUTES[r], def = routeLevelDef(r, n), mod = def.modifier ? MODIFIERS[def.modifier] : null;
+        return `Ruta de ${R.name}, nivel ${n} de ${ROUTE_LEVELS}. ${mod ? `${mod.name}: ${mod.desc} ` : ''}${plural(def.count, 'enemigo', 'enemigos')}.`;
+    },
+    meetName(def) { return `¡Nueva criatura! ${def.name}. ${def.desc} Escucha.`; },
+    meetWeak(def) { return `${weaknessText(def)} Nunca uses ${elementNames(def.cure)}: la curarías. Escucha otra vez.`; },
+};
 
 /** Describe cómo vencer a un perfil de combate (para pistas y bestiario). */
 function weaknessText(profile) {

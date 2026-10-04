@@ -247,6 +247,7 @@ class Tutorial {
             'Si se agota el tiempo, el enemigo te ataca. Cada error te quita una vida.',
             'Cada cinco aciertos seguidos sube tu multiplicador de puntos, y las rachas largas te devuelven vidas.',
             'Espacio repite el enemigo actual. H te da una pista sobre su debilidad. Escape pausa el juego.',
+            'Y cuando ya reconozcas a las criaturas por su sonido, la tecla V apaga la voz que las anuncia. Vuelve a pulsarla para encenderla.',
         ])) return false;
         if (!await this.#exercise(gen, {
             text: 'Y Enter te dice tus vidas y tus puntos. Pulsa Enter ahora.', expect: { kind: 'command', id: 'status' },
