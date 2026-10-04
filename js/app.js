@@ -1417,6 +1417,7 @@ const App = (() => {
             },
             { id: 'storyRate', label: 'Velocidad de la historia', type: 'range', min: 0.7, max: 1.5, step: 0.1, fmt: v => fmtDecimal(v) },
             { id: 'storyTest', label: 'Escuchar la voz de la historia', type: 'action', run: () => testStory() },
+            { id: 'storyDiag', label: 'Comprobar la voz de la historia', type: 'action', run: () => diagnoseStory() },
             { id: 'test', label: 'Probar sonido y voz', type: 'action', run: () => testSound() },
             { id: 'reset', label: 'Borrar el progreso de este invocador', type: 'action', danger: true, run: () => confirmReset() },
         ];
@@ -1433,6 +1434,33 @@ const App = (() => {
         speech.cancel();
         if (settings.storyVoice !== 'sistema' && narrator.preview()) return;
         speech.say('Así sonará la historia. Escucha: el Silencio se acerca, y solo tu voz puede despertar los ecos.', { rate: settings.storyRate });
+    }
+
+    /** Dice, paso a paso, si la narración grabada puede sonar aquí (y por qué no). */
+    async function diagnoseStory() {
+        speech.say('Comprobando la voz de la historia…');
+        const r = await narrator.diagnose();
+        const lines = [`Versión del juego: ${GAME_VERSION.spoken} (${GAME_VERSION.id}).`];
+        if (settings.storyVoice === 'sistema') lines.push('Tienes elegida la voz del sistema para la historia: cámbiala a Narradores grabados.');
+        if (!r.manifest) {
+            lines.push(`No se encuentra la lista de audios de la narración${r.manifestStatus ? ` (respuesta: ${r.manifestStatus})` : ''}. La historia se lee con la voz del sistema.`);
+        } else {
+            lines.push(`Narración grabada encontrada: ${plural(r.paragraphs, 'párrafo', 'párrafos')}.`);
+            if (r.http && r.http !== 200) lines.push(`El servidor no entrega los audios (error ${r.http}). Mientras tanto, la historia se lee con la voz del sistema.`);
+            else if (r.error) lines.push(`No se pudo cargar un audio de prueba: ${r.error}. Mientras tanto, la historia se lee con la voz del sistema.`);
+            else if (r.seconds) lines.push(`Audio de prueba descargado y leído: ${fmtDecimal(r.seconds)} segundos.`);
+            lines.push(r.running ? 'El sonido del juego está activo.' : `El sonido del juego está detenido (${r.sound}). Toca la pantalla o pulsa una tecla y vuelve a probar.`);
+            if (r.broken) lines.push(`Antes falló varias veces y se pasó a la voz del sistema. Último error: ${r.lastError || 'desconocido'}.`);
+        }
+        const ok = r.manifest && r.seconds && r.running && !r.broken && settings.storyVoice !== 'sistema';
+        if (ok) lines.push('Todo correcto. Pulsa «Escuchar una muestra» y deberías oír al narrador.');
+        const c = await Dialog.open({
+            title: ok ? 'La voz de la historia funciona' : 'La voz de la historia tiene un problema',
+            text: lines.join('\n'),
+            buttons: [{ label: 'Escuchar una muestra', value: 'test' }, { label: 'Volver', value: 'back' }],
+            cancel: 'back',
+        });
+        if (c === 'test') testStory();
     }
 
     function testSound() {
@@ -1514,7 +1542,7 @@ const App = (() => {
         initSplash();
         initMenu();
         initRoutes();
-        console.info(`[Aethelgard] Versión ${GAME_VERSION} lista.`);
+        console.info(`[Aethelgard] Versión ${GAME_VERSION.id} lista.`);
     }
 
     return {

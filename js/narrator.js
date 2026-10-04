@@ -181,6 +181,43 @@ class Narrator {
         return true;
     }
 
+    /** Comprueba paso a paso si la narración grabada puede sonar en este navegador. */
+    async diagnose() {
+        const r = { manifest: false, sections: 0, paragraphs: 0, sound: this.#audio.ctx?.state || 'sin iniciar', broken: this.#broken, lastError: this.lastError };
+        await this.load();
+        if (!this.#manifest) {
+            try {
+                const res = await fetch(this.#base + 'manifest.json', { cache: 'no-store' });
+                r.manifestStatus = res.status;
+            } catch (e) { r.manifestStatus = String(e && e.message || e); }
+            return r;
+        }
+        r.manifest = true;
+        r.sections = Object.keys(this.#manifest.secciones).length;
+        r.paragraphs = Object.values(this.#manifest.secciones).reduce((n, s) => n + s.length, 0);
+        const seg = Object.values(this.#manifest.secciones).flat().flatMap(p => p.s).find(s => s.v === 'narrador');
+        r.file = seg?.f;
+        if (!seg) return r;
+        try {
+            const res = await fetch(this.#url(seg.f), { cache: 'no-store' });
+            r.http = res.status;
+            r.type = res.headers.get('content-type') || '';
+            if (!res.ok) return { ...r, running: await this.#ensureRunning(), sound: this.#audio.ctx?.state || 'sin iniciar' };
+            const data = await res.arrayBuffer();
+            r.bytes = data.byteLength;
+            if (this.#audio.ctx) {
+                const b = await this.#decode(data);
+                r.seconds = Math.round(b.duration * 10) / 10;
+            }
+        } catch (e) {
+            const m = String(e && e.message || e);
+            r.error = /decode/i.test(m) ? `el navegador no pudo leer el archivo de audio (${r.type || 'tipo desconocido'})` : m;
+        }
+        r.running = await this.#ensureRunning();
+        r.sound = this.#audio.ctx?.state || 'sin iniciar';
+        return r;
+    }
+
     /** Tras un gesto del jugador: si el problema era el sonido bloqueado y ya funciona, se vuelve a intentar. */
     recover() {
         if (this.#broken && this.#brokenBySound && this.#audio.ctx?.state === 'running') {
@@ -225,8 +262,14 @@ class Narrator {
         return p;
     }
 
+    /** La huella del audio en la URL: si se vuelve a generar, el navegador no usa la copia vieja. */
+    #url(file) {
+        const v = this.#manifest?.cache?.[file];
+        return this.#base + file + (v ? `?v=${v}` : '');
+    }
+
     #raw(file) {
-        return this.#cached(file, () => fetch(this.#base + file)
+        return this.#cached(file, () => fetch(this.#url(file))
             .then(r => { if (!r.ok) throw new Error(`No se pudo descargar ${file} (HTTP ${r.status})`); return r.arrayBuffer(); })
             .then(data => this.#decode(data)));
     }
