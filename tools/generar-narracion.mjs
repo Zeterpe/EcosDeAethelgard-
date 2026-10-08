@@ -341,7 +341,7 @@ async function main() {
 
 /** El juego no necesita el texto ni las huellas dentro de cada fragmento. */
 function limpiar(m) {
-    const out = { version: m.version, formato: m.formato, generado: m.generado, secciones: {}, cache: m.cache };
+    const out = { version: m.version, formato: m.formato, ritmo: m.ritmo, generado: m.generado, secciones: {}, cache: m.cache };
     for (const [k, ps] of Object.entries(m.secciones)) out.secciones[k] = ps.map(p => ({ h: p.h, s: p.s.map(({ f, v, e }) => ({ f, v, e })) }));
     return out;
 }
