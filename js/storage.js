@@ -22,7 +22,8 @@ const DEFAULT_SETTINGS = {
     mono: false,
     visualAids: true,
     storyVoice: 'grabada',    // grabada: narradores generados · sistema: voz del navegador
-    storyRate: 1.0,           // velocidad de la historia, aparte de la voz del juego
+    storyRate: 1.5,           // velocidad de la historia, aparte de la voz del juego (0,8 a 2)
+    settingsVersion: 2,
 };
 
 const Storage = {
@@ -38,10 +39,15 @@ const Storage = {
     loadSettings() {
         const raw = this._json(this._get(this.SETTINGS)) || {};
         const s = { ...DEFAULT_SETTINGS, ...raw };
+        // Versión 2: la historia empieza a 1,5. Quien tenía la velocidad antigua por defecto (1) pasa a 1,5.
+        if ((raw.settingsVersion || 1) < 2) {
+            if (!raw.storyRate || +raw.storyRate === 1) s.storyRate = DEFAULT_SETTINGS.storyRate;
+            s.settingsVersion = 2;
+        }
         if (!DIFFICULTIES[s.difficulty]) s.difficulty = DEFAULT_SETTINGS.difficulty;
         if (!KEY_SCHEMES[s.keyScheme]) s.keyScheme = DEFAULT_SETTINGS.keyScheme;
         s.speechRate = clamp(+s.speechRate || 1, 0.5, 2.5);
-        s.storyRate = clamp(+s.storyRate || 1, 0.7, 1.5);
+        s.storyRate = clamp(+s.storyRate || DEFAULT_SETTINGS.storyRate, 0.8, 2);
         return s;
     },
     saveSettings(s) { this._set(this.SETTINGS, JSON.stringify(s)); },

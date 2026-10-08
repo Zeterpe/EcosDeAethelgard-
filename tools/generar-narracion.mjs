@@ -29,27 +29,32 @@ import { fileURLToPath } from 'node:url';
 // coma: silencio extra en cada coma (en milisegundos).
 // ═══════════════════════════════════════════════════════
 
+// Los audios se graban ya al ritmo de «Velocidad de la historia 1,5» (el valor por defecto del juego):
+// así, a esa velocidad suenan tal cual, sin ningún procesado. Si cambias el ritmo de todo el reparto,
+// cambia también RITMO para que el juego sepa a qué velocidad se grabaron.
+export const RITMO = 1.5;
+
 export const REPARTO = {
-    narrador: { nombre: 'Narrador', voz: 'es-ES-AlvaroNeural', genero: 'Male', velocidad: '-15%', tono: '-6%', pausa: 750, coma: 180, efecto: 'narrador' },
-    sylvara: { nombre: 'Maestra Sylvara', voz: 'es-ES-ElviraNeural', genero: 'Female', velocidad: '-12%', tono: '-3%', pausa: 600, coma: 140, efecto: 'eco' },
-    tomas: { nombre: 'Archivero Tomás', voz: 'es-ES-ArnauNeural', genero: 'Male', velocidad: '-6%', tono: '+3%', pausa: 450, coma: 100, efecto: 'eco' },
-    avatar: { nombre: 'Avatar del Silencio', voz: 'es-ES-SaulNeural', genero: 'Male', velocidad: '-22%', tono: '-14%', pausa: 950, coma: 300, efecto: 'avatar' },
-    ignar: { nombre: 'Ignar', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '-14%', tono: '-8%', pausa: 650, coma: 200, efecto: 'guardian' },
-    corriente: { nombre: 'La Gran Corriente', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '-18%', tono: '-3%', pausa: 750, coma: 220, efecto: 'guardian' },
-    zael: { nombre: 'Zael', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '-12%', tono: '+4%', pausa: 700, coma: 200, efecto: 'guardian' },
-    rok: { nombre: 'Rok', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-22%', tono: '-16%', pausa: 800, coma: 250, efecto: 'guardian' },
-    ignar_furia: { nombre: 'Ignar (furia)', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '+4%', tono: '-6%', volumen: 'loud', pausa: 0, efecto: 'furia' },
-    corriente_furia: { nombre: 'Leviatán (furia)', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '+2%', tono: '-8%', volumen: 'loud', pausa: 0, efecto: 'furia' },
-    zael_furia: { nombre: 'Zael (furia)', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '+8%', tono: '+2%', volumen: 'loud', pausa: 0, efecto: 'furia' },
-    rok_furia: { nombre: 'Rok (furia)', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-6%', tono: '-14%', volumen: 'loud', pausa: 0, efecto: 'furia' },
+    narrador: { nombre: 'Narrador', voz: 'es-ES-AlvaroNeural', genero: 'Male', velocidad: '+15%', tono: '-6%', pausa: 220, coma: 40, efecto: 'narrador' },
+    sylvara: { nombre: 'Maestra Sylvara', voz: 'es-ES-ElviraNeural', genero: 'Female', velocidad: '+15%', tono: '-3%', pausa: 180, coma: 40, efecto: 'eco' },
+    tomas: { nombre: 'Archivero Tomás', voz: 'es-ES-ArnauNeural', genero: 'Male', velocidad: '+20%', tono: '+3%', pausa: 150, coma: 30, efecto: 'eco' },
+    avatar: { nombre: 'Avatar del Silencio', voz: 'es-ES-SaulNeural', genero: 'Male', velocidad: '+5%', tono: '-14%', pausa: 300, coma: 90, efecto: 'avatar' },
+    ignar: { nombre: 'Ignar', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '+10%', tono: '-8%', pausa: 200, coma: 60, efecto: 'guardian' },
+    corriente: { nombre: 'La Gran Corriente', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '+5%', tono: '-3%', pausa: 220, coma: 70, efecto: 'guardian' },
+    zael: { nombre: 'Zael', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '+15%', tono: '+4%', pausa: 200, coma: 60, efecto: 'guardian' },
+    rok: { nombre: 'Rok', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '+5%', tono: '-16%', pausa: 250, coma: 80, efecto: 'guardian' },
+    ignar_furia: { nombre: 'Ignar (furia)', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '+15%', tono: '-6%', volumen: 'loud', pausa: 0, efecto: 'furia' },
+    corriente_furia: { nombre: 'Leviatán (furia)', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '+12%', tono: '-8%', volumen: 'loud', pausa: 0, efecto: 'furia' },
+    zael_furia: { nombre: 'Zael (furia)', voz: 'es-ES-TeoNeural', genero: 'Male', velocidad: '+20%', tono: '+2%', volumen: 'loud', pausa: 0, efecto: 'furia' },
+    rok_furia: { nombre: 'Rok (furia)', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '+5%', tono: '-14%', volumen: 'loud', pausa: 0, efecto: 'furia' },
     // Guardianes corrompidos antes del combate: su voz, poseída por el Silencio
-    ignar_corrupto: { nombre: 'Ignar (corrompido)', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '-10%', tono: '-14%', pausa: 450, coma: 150, efecto: 'avatar' },
-    corriente_corrupta: { nombre: 'Leviatán (corrompido)', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '-20%', tono: '-12%', pausa: 650, coma: 220, efecto: 'avatar' },
-    rok_corrupto: { nombre: 'Rok (corrompido)', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-24%', tono: '-18%', pausa: 700, coma: 250, efecto: 'avatar' },
+    ignar_corrupto: { nombre: 'Ignar (corrompido)', voz: 'es-ES-EliasNeural', genero: 'Male', velocidad: '+10%', tono: '-14%', pausa: 150, coma: 45, efecto: 'avatar' },
+    corriente_corrupta: { nombre: 'Leviatán (corrompido)', voz: 'es-ES-VeraNeural', genero: 'Female', velocidad: '+0%', tono: '-12%', pausa: 200, coma: 65, efecto: 'avatar' },
+    rok_corrupto: { nombre: 'Rok (corrompido)', voz: 'es-ES-DarioNeural', genero: 'Male', velocidad: '-2%', tono: '-18%', pausa: 220, coma: 75, efecto: 'avatar' },
     // Crónicas de los Antiguos Ecos
-    aldara: { nombre: 'Maestra Aldara', voz: 'es-ES-TrianaNeural', genero: 'Female', velocidad: '-12%', tono: '-2%', pausa: 650, coma: 160, efecto: 'eco' },
-    darien: { nombre: 'Darién', voz: 'es-ES-NilNeural', genero: 'Male', velocidad: '-6%', tono: '+2%', pausa: 450, coma: 120, efecto: 'eco' },
-    darien_espiritu: { nombre: 'Darién (espíritu)', voz: 'es-ES-NilNeural', genero: 'Male', velocidad: '-14%', tono: '0%', pausa: 700, coma: 200, efecto: 'guardian' },
+    aldara: { nombre: 'Maestra Aldara', voz: 'es-ES-TrianaNeural', genero: 'Female', velocidad: '+12%', tono: '-2%', pausa: 200, coma: 45, efecto: 'eco' },
+    darien: { nombre: 'Darién', voz: 'es-ES-NilNeural', genero: 'Male', velocidad: '+18%', tono: '+2%', pausa: 150, coma: 35, efecto: 'eco' },
+    darien_espiritu: { nombre: 'Darién (espíritu)', voz: 'es-ES-NilNeural', genero: 'Male', velocidad: '+8%', tono: '0%', pausa: 220, coma: 60, efecto: 'guardian' },
 };
 
 const FORMATOS = {
@@ -291,7 +296,7 @@ async function main() {
     await comprobarVoces(clave, region);
 
     const previo = fs.existsSync(MANIFIESTO) ? JSON.parse(fs.readFileSync(MANIFIESTO, 'utf8')) : { cache: {} };
-    const manifiesto = { version: 1, formato, generado: new Date().toISOString(), secciones: {}, cache: {} };
+    const manifiesto = { version: 1, formato, ritmo: RITMO, generado: new Date().toISOString(), secciones: {}, cache: {} };
     const usados = new Set();
     let hechos = 0, reutilizados = 0, caracteres = 0, ultima = 0;
     const ext = FORMATOS[formato].ext;

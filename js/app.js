@@ -1415,7 +1415,7 @@ const App = (() => {
                             : 'Aún no se han generado los audios: mientras tanto se usa la voz del sistema.')
                     : 'La historia la lee la misma voz que el resto del juego.',
             },
-            { id: 'storyRate', label: 'Velocidad de la historia', type: 'range', min: 0.7, max: 1.5, step: 0.1, fmt: v => fmtDecimal(v) },
+            { id: 'storyRate', label: 'Velocidad de la historia', type: 'range', min: 0.8, max: 2, step: 0.1, fmt: v => fmtDecimal(v) },
             { id: 'storyTest', label: 'Escuchar la voz de la historia', type: 'action', run: () => testStory() },
             { id: 'storyDiag', label: 'Comprobar la voz de la historia', type: 'action', run: () => diagnoseStory() },
             { id: 'test', label: 'Probar sonido y voz', type: 'action', run: () => testSound() },
@@ -1433,7 +1433,7 @@ const App = (() => {
     function testStory() {
         speech.cancel();
         if (settings.storyVoice !== 'sistema' && narrator.preview()) return;
-        speech.say('Así sonará la historia. Escucha: el Silencio se acerca, y solo tu voz puede despertar los ecos.', { rate: settings.storyRate });
+        speech.say('Así sonará la historia. Escucha: el Silencio se acerca, y solo tu voz puede despertar los ecos.', { rate: settings.storyRate / (settings.speechRate || 1) });
     }
 
     /** Dice, paso a paso, si la narración grabada puede sonar aquí (y por qué no). */

@@ -302,19 +302,21 @@ const Narration = {
             $('narration-progress').textContent = n > 1 ? `${i + 1} de ${n}` : '';
         };
         const plan = UI.narrator ? UI.narrator.plan(key, paragraphs) : null;
-        // Solo la historia (las narraciones con clave) usa la «Velocidad de la historia».
-        const rate = key ? clamp(UI.settings.storyRate || 1, 0.7, 1.5) : 1;
+        // Solo la historia (las narraciones con clave) usa la «Velocidad de la historia», aparte de la del juego.
+        const story = key ? clamp(UI.settings.storyRate || 1.5, 0.8, 2) : null;
+        const rate = story ? story / (UI.settings.speechRate || 1) : 1;      // para la voz del sistema
         this._recorded = !!plan;
         try {
             if (plan) {
                 UI.speech.cancel();
+                const f = story / (UI.narrator.nativeRate || 1);                // respecto a la grabación
                 ok = await UI.narrator.play(paragraphs, plan, {
-                    gap: Math.round((gap + 500) / rate), onParagraph,
+                    gap: Math.round((150 + gap * 0.4) / Math.max(0.5, f)), onParagraph,
                     tts: p => UI.speech.say(p, { pitch, rate }),
                     cancelTts: () => UI.speech.cancel(),
                 });
             } else {
-                ok = await UI.speech.narrate(paragraphs, { pitch, gap: Math.round(gap / rate), rate, onParagraph });
+                ok = await UI.speech.narrate(paragraphs, { pitch, gap: Math.round(gap / (story || 1)), rate, onParagraph });
             }
         } finally {
             // Si otra narración la ha sustituido, la pantalla ya es de esa otra.
