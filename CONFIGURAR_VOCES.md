@@ -123,4 +123,4 @@ En **Opciones → Voz de la historia** cada uno elige:
 - **Narradores grabados**: las voces de Azure con sus efectos.
 - **Voz del sistema**: la misma voz que el resto del juego (o el lector de pantalla), por si alguien la prefiere más rápida.
 
-**Velocidad de la historia** acelera o frena solo las narraciones (sin cambiar el tono), aparte de la velocidad de voz del resto del juego, y **Escuchar la voz de la historia** pone unos segundos del narrador para probarla. **Enter** salta un párrafo y **Escape** toda la narración, igual que antes.
+**Velocidad de la historia** (de 0,8 a 2; empieza en 1,5) acelera o frena solo las narraciones, aparte de la velocidad de voz del resto del juego. Las voces se graban ya al ritmo de 1,5 (`RITMO` en el generador), así que a esa velocidad suenan tal cual; para otras velocidades se cambian sobre todo las pausas y muy poco la voz, sin cambiar el tono. Además, los silencios de más de 0,4 segundos se acortan siempre. La opción **Escuchar la voz de la historia** pone unos segundos del narrador para probarla. **Enter** salta un párrafo y **Escape** toda la narración, igual que antes.
