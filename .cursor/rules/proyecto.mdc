@@ -1,0 +1,13 @@
+---
+description: Guía del proyecto Ecos de Aethelgard (accesibilidad, versión, narración grabada, Git)
+alwaysApply: true
+---
+
+Antes de cambiar nada, lee y sigue la guía del proyecto: @CLAUDE.md
+
+Lo esencial:
+- Juego de audio para personas ciegas: todo debe poder jugarse sin ver la pantalla.
+- Si cambias un .js o .css, sube GAME_VERSION en js/data.js y los ?v= de index.html.
+- Los textos de js/lore.js y STORY_LINES tienen voces grabadas: si cambian, hay que relanzar «Generar narración» en GitHub Actions. No edites audio/narracion a mano.
+- Nunca escribas la clave de Azure en ningún archivo.
+- Trabaja en una rama propia y haz git pull antes de empezar.
