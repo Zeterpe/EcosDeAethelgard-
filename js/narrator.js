@@ -74,14 +74,8 @@ function timeStretch(ctx, buffer, rate) {
     return res;
 }
 
-/**
- * Cambia la velocidad de una narración tocando sobre todo las pausas:
- * para ir más deprisa, los silencios entre frases se acortan mucho y la
- * voz solo un poco; para ir más despacio, al revés. Así la voz casi no
- * se deforma. f: velocidad respecto a la grabación (1 = tal cual).
- */
-function paceStretch(ctx, buffer, f) {
-    if (Math.abs(f - 1) < 0.01) return buffer;
+/** Marca en tramos de 10 ms dónde hay pausa (silencio de 80 ms o más). */
+function findPauses(buffer) {
     const sr = buffer.sampleRate, x = buffer.getChannelData(0);
     const hop = Math.round(sr * 0.01), n = Math.max(1, Math.ceil(x.length / hop));
     const rms = new Float32Array(n);
@@ -93,7 +87,7 @@ function paceStretch(ctx, buffer, f) {
     }
     const loud = Array.from(rms).sort((p, q) => p - q)[Math.floor(n * 0.9)] || 0;
     const thr = Math.max(0.003, loud * 0.08);
-    const pause = new Uint8Array(n);                 // pausa: silencio de 80 ms o más
+    const pause = new Uint8Array(n);
     for (let i = 0; i < n;) {
         if (rms[i] >= thr) { i++; continue; }
         let j = i;
@@ -101,6 +95,70 @@ function paceStretch(ctx, buffer, f) {
         if (j - i >= 8) pause.fill(1, i, j);
         i = j;
     }
+    return { hop, n, pause };
+}
+
+/**
+ * Recorta los silencios largos (Azure deja hasta un segundo entre frases)
+ * a maxMs como mucho. Solo se quita aire: la voz no se toca.
+ */
+function trimPauses(ctx, buffer, maxMs = 400) {
+    const sr = buffer.sampleRate, x = buffer.getChannelData(0);
+    const { hop, n, pause } = findPauses(buffer);
+    const keep = Math.round(maxMs / 10), fade = Math.round(sr * 0.005);
+    const cuts = [];                                   // [desde, hasta) en muestras
+    for (let i = 0; i < n;) {
+        if (!pause[i]) { i++; continue; }
+        let j = i;
+        while (j < n && pause[j]) j++;
+        if (j - i > keep) {
+            const a = (i + Math.floor(keep / 2)) * hop, b = Math.min(x.length, (j - Math.ceil(keep / 2)) * hop);
+            if (b > a) cuts.push([a, b]);
+        }
+        i = j;
+    }
+    if (!cuts.length) return buffer;
+    const removed = cuts.reduce((t, [a, b]) => t + (b - a), 0);
+    const out = new Float32Array(x.length - removed);
+    const joins = [];
+    let o = 0, from = 0;
+    for (const [a, b] of cuts) {
+        out.set(x.subarray(from, a), o);
+        o += a - from;
+        joins.push(o);
+        from = b;
+    }
+    out.set(x.subarray(from), o);
+    for (const j of joins) {                           // fundidos de 5 ms en cada corte (todo es silencio)
+        for (let k = 0; k < fade; k++) {
+            const g = k / fade;
+            if (j - 1 - k >= 0) out[j - 1 - k] *= g;
+            if (j + k < out.length) out[j + k] *= g;
+        }
+    }
+    const res = ctx.createBuffer(1, out.length, sr);
+    res.getChannelData(0).set(out);
+    return res;
+}
+
+/**
+ * Cambia la velocidad de una narración tocando sobre todo las pausas:
+ * primero recorta los silencios demasiado largos y, si además hay que ir
+ * más deprisa, acorta mucho las pausas y la voz solo un poco; para ir más
+ * despacio, al revés. Así la voz casi no se deforma y el tono no cambia.
+ * f: velocidad respecto a la grabación (1 = tal cual, salvo los silencios largos).
+ */
+function paceStretch(ctx, buffer, f) {
+    const base = trimPauses(ctx, buffer, 400);
+    if (Math.abs(f - 1) < 0.01) return base;
+    if (f < 1) {
+        // Para ir más despacio se dejan las pausas algo más largas (la duración final es la misma):
+        // así la voz se estira menos.
+        const roomy = trimPauses(ctx, buffer, Math.round(400 / Math.sqrt(f)));
+        f *= roomy.length / base.length;
+        buffer = roomy;
+    } else buffer = base;
+    const { hop, n, pause } = findPauses(buffer);
     let Ts = 0;
     for (let i = 0; i < n; i++) Ts += pause[i];
     const Tv = n - Ts, target = n / f;
@@ -334,7 +392,6 @@ class Narrator {
     }
 
     #bufferFor(file, rate = this.#rate()) {
-        if (Math.abs(rate - 1) < 0.01) return this.#raw(file);
         return this.#cached(`${file}@${rate}`, () => this.#raw(file).then(b => paceStretch(this.#audio.ctx, b, rate)));
     }
 
