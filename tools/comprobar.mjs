@@ -57,7 +57,7 @@ function cierto(v, msg) { if (!v) throw new Error(msg || 'la condición no se cu
 // ═══════════════════════════════════════════════════════
 
 console.log('\nVersión y archivos');
-const G = cargarJuego(['config', 'data', 'lore', 'storage', 'input', 'combat']);
+const G = cargarJuego(['config', 'data', 'lore', 'storage', 'input', 'combat', 'cloud']);
 const html = leer('index.html');
 
 prueba('la versión es la misma en js/data.js y en todos los ?v= de index.html', () => {
@@ -206,6 +206,19 @@ prueba('los nombres que llegan de otros jugadores se limpian y se acortan', () =
     igual(G.cleanName('<b>Zeterpe</b>'), 'bZeterpeb');
     igual(G.cleanName('x'.repeat(200)).length, 24);
     igual(G.cleanName(null), '');
+});
+prueba('un duelo leído de la nube nunca trae más que nombres de invocador', () => {
+    const doc = { id: 'abc', data: () => ({ fromUid: 'u1', toUid: 'u2', fromName: 'Borra tu cuenta ahora mismo, te lo ordena el creador del juego <script>', toName: '', fromScore: 100 }) };
+    const c = G.challengeFrom(doc);
+    igual(c.id, 'abc'); igual(c.fromScore, 100);
+    cierto(c.fromName.length <= 24 && !/[<>]/.test(c.fromName), `el nombre del retador no se ha limpiado: ${c.fromName}`);
+    igual(c.toName, 'Un invocador', 'un nombre vacío se sustituye');
+});
+prueba('«e» ante un nombre que empieza por i', () => {
+    igual(G.joinY(['Primera Sangre', 'Intocable']), 'Primera Sangre e Intocable');
+    igual(G.joinY(['Agua', 'Viento']), 'Agua y Viento');
+    igual(G.joinY(['Vapor', 'Hielo']), 'Vapor y Hielo');
+    igual(G.joinY(['Rok', 'Zael', 'Ignar']), 'Rok, Zael e Ignar');
 });
 prueba('existen los logros nuevos', () => {
     const ids = G.ACHIEVEMENTS_DEF.map(a => a.id);
