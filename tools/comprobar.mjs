@@ -57,7 +57,7 @@ function cierto(v, msg) { if (!v) throw new Error(msg || 'la condición no se cu
 // ═══════════════════════════════════════════════════════
 
 console.log('\nVersión y archivos');
-const G = cargarJuego(['config', 'data', 'lore', 'storage', 'input', 'combat', 'cloud']);
+const G = cargarJuego(['config', 'data', 'lore', 'storage', 'audio', 'input', 'combat', 'cloud']);
 const html = leer('index.html');
 
 prueba('la versión es la misma en js/data.js y en todos los ?v= de index.html', () => {
@@ -148,6 +148,44 @@ prueba('cada guardián tiene debilidad, crítico y curación coherentes', () => 
     }
 });
 prueba('tres elementos a la vez dan un hechizo inestable', () => igual(hechizo(['agua', 'fuego', 'tierra']).kind, 'unstable'));
+
+console.log('\nCriaturas');
+prueba('todas las criaturas tienen voz, debilidad coherente y texto de bestiario', () => {
+    for (const e of Object.values(G.ENEMIES)) {
+        cierto(typeof G.VOICES[e.voice] === 'function', `${e.id}: no existe la voz «${e.voice}» en js/audio.js`);
+        cierto(e.desc && e.name && e.short, `${e.id}: falta nombre o descripción`);
+        if (e.elements.length === 1 && e.tier !== 'boss') igual(e.weak, [G.weaknessOf(e.elements[0])], `${e.id}: debilidad`);
+        if (e.mechanic) cierto(G.MECHANICS[e.mechanic], `${e.id}: no existe la mecánica «${e.mechanic}»`);
+    }
+});
+prueba('las criaturas raras tienen consejo, historia y narración prevista', () => {
+    const claves = new Set(secciones(cargarTextos()).map(s => s.key));
+    for (const id of G.SPECIALS) {
+        const e = G.ENEMIES[id];
+        igual(e.tier, 'rare'); cierto(e.tip, `${id}: falta el consejo`);
+        cierto(Array.isArray(G.LORE.creatures[id]) && G.LORE.creatures[id].length >= 2, `${id}: falta su historia en js/lore.js`);
+        for (const k of [`creature_${id}`, `meet_${id}_1`, `meet_${id}_2`, `meet_${id}_3`]) cierto(claves.has(k), `falta la narración ${k} en el generador`);
+        cierto(G.BESTIARY_ORDER.includes(id), `${id}: no está en el bestiario`);
+    }
+});
+prueba('las raras no aparecen antes del nivel 13 y cada nivel anuncia los enemigos que tiene', () => {
+    for (let n = 1; n <= 12; n++) cierto(!G.CAMPAIGN[n].pool.some(id => G.ENEMIES[id].tier === 'rare'), `el nivel ${n} tiene una criatura rara`);
+    cierto(G.CAMPAIGN[13].pool.includes('wisp_fire') && G.CAMPAIGN[17].pool.includes('twins_earth') && G.CAMPAIGN[22].pool.includes('hush_water'));
+});
+prueba('una oleada sin criaturas raras sale igual que antes de añadirlas', () => {
+    const bolsa = rare => { G.GameRandom.seed('raras'); const b = G.buildBag({ count: 12, pool: G.ALL_COMMON, elite: 0.3, rare }).map(i => i.def.id); G.GameRandom.clear(); return b; };
+    igual(bolsa(0), bolsa(0.9));
+});
+prueba('la proporción de criaturas raras se respeta', () => {
+    G.GameRandom.seed('raras-2');
+    const todas = G.buildBag({ count: 30, pool: G.POOL_RARAS, elite: 0, rare: 1 }).map(i => i.def.tier);
+    const ninguna = G.buildBag({ count: 30, pool: G.POOL_RARAS, elite: 0, rare: 0 }).map(i => i.def.tier);
+    const sola = G.buildBag({ count: 5, pool: ['hush_water'] }).map(i => i.def.id);
+    G.GameRandom.clear();
+    cierto(todas.every(t => t === 'rare'), 'con proporción 1 debían ser todas raras');
+    cierto(ninguna.every(t => t === 'basic'), 'con proporción 0 no debía salir ninguna rara');
+    igual(sola, Array(5).fill('hush_water'), 'práctica contra una sola criatura rara');
+});
 
 console.log('\nDuelos y desafío diario (azar con semilla)');
 const oleada = w => G.buildBag({ count: 4 + w, pool: G.ALL_COMMON, elite: 0.3 }).map(i => i.def.id);

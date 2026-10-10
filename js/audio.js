@@ -304,6 +304,33 @@ const VOICES = {
         return t + 1.05;
     },
 
+    // Fuego Errante: llama que silba hacia arriba, con chisporroteo fino
+    wisp(k, out, t, p) {
+        k.tone(out, { t, f: [[0, 520 * p], [0.25, 980 * p], [0.5, 760 * p]], type: 'triangle', dur: 0.5, a: 0.03, r: 0.2, peak: 0.2, vib: { rate: 11, depth: 26 * p } });
+        k.noise(out, { t, color: 'crackle', dur: 0.6, a: 0.02, r: 0.25, peak: 0.45, filter: { type: 'highpass', f: 2200 } });
+        k.noise(out, { t, color: 'pink', dur: 0.5, a: 0.08, r: 0.25, peak: 0.16, filter: { type: 'bandpass', f: [[0, 900], [0.45, 2800]], q: 2.5 } });
+        return t + 0.62;
+    },
+
+    // Gemelos de Piedra: dos guijarros que chocan (toc, toc) y un zumbido breve
+    twins(k, out, t, p) {
+        [0, 0.17].forEach((dt, i) => {
+            k.tone(out, { t: t + dt, f: (i ? 1050 : 880) * p, dur: 0.07, a: 0.001, r: 0.065, exp: true, peak: 0.34 });
+            k.noise(out, { t: t + dt, color: 'white', dur: 0.03, a: 0.001, r: 0.028, peak: 0.34, filter: { type: 'bandpass', f: 3200, q: 2 } });
+            k.thump(out, { t: t + dt, f0: 210 * p, f1: 120 * p, dur: 0.1, peak: 0.3 });
+        });
+        k.tone(out, { t: t + 0.32, f: [[0, 196 * p], [0.3, 165 * p]], type: 'triangle', dur: 0.32, a: 0.02, r: 0.2, peak: 0.16 });
+        return t + 0.66;
+    },
+
+    // Susurro de Bruma: soplo húmedo con una nana que cae y una gota (en combate suena muy bajo)
+    hush(k, out, t, p) {
+        k.noise(out, { t, color: 'pink', dur: 0.9, a: 0.25, r: 0.4, peak: 0.5, filter: { type: 'bandpass', f: [[0, 2200], [0.9, 1200]], q: 1.2 } });
+        k.tone(out, { t: t + 0.1, f: [[0, 660 * p], [0.35, 587 * p], [0.7, 494 * p]], dur: 0.75, a: 0.15, r: 0.35, peak: 0.2, vib: { rate: 4, depth: 5 * p } });
+        k.tone(out, { t: t + 0.55, f: [[0, 300 * p], [0.07, 900 * p]], dur: 0.09, a: 0.004, r: 0.06, peak: 0.12 });
+        return t + 0.95;
+    },
+
     // Brasa de la Forja: gemido breve + chisporroteo intenso
     ember(k, out, t, p) {
         k.tone(out, { t, f: [[0, 720 * p], [0.12, 1050 * p], [0.32, 620 * p]], type: 'triangle', dur: 0.34, a: 0.01, r: 0.15, peak: 0.2, filter: { type: 'bandpass', f: 1200, q: 1 } });
@@ -655,8 +682,11 @@ class AudioEngine {
         return end - this.ctx.currentTime;
     }
 
-    /** Corriente que se desplaza por varias posiciones (Leviatán). Devuelve el retraso hasta la última. */
-    playSweep(path, stepS = 0.4) {
+    /**
+     * Algo que se desplaza por varias posiciones. kind: 'water' (la corriente del Leviatán) o
+     * 'wisp' (la llama del Fuego Errante). Devuelve el retraso hasta la última posición.
+     */
+    playSweep(path, stepS = 0.4, kind = 'water') {
         if (!this.ctx) return 0;
         const c = this.ctx, k = this.kit, t = c.currentTime + 0.04;
         const nodes = [];
@@ -673,11 +703,17 @@ class AudioEngine {
             else { pan.pan.linearRampToValueAtTime(ps.pan, ti); lp.frequency.exponentialRampToValueAtTime(ps.cut, ti); }
         });
         const total = (path.length - 1) * stepS + 0.3;
-        k.noise(input, { t, color: 'pink', dur: total, a: 0.1, r: 0.25, peak: 0.5, filter: { type: 'bandpass', f: 800, q: 0.7 } });
-        k.noise(input, { t, color: 'brown', dur: total, a: 0.1, r: 0.25, peak: 0.45, filter: { type: 'lowpass', f: 380 } });
-        for (let i = 0; i < 6; i++) {
-            const t0 = t + Math.random() * total, f0 = 200 + Math.random() * 300;
-            k.tone(input, { t: t0, f: [[0, f0], [0.06, f0 * 2.3]], dur: 0.08, a: 0.004, r: 0.05, peak: 0.12 });
+        if (kind === 'wisp') {
+            k.noise(input, { t, color: 'pink', dur: total, a: 0.06, r: 0.2, peak: 0.42, filter: { type: 'bandpass', f: 1700, q: 1.2 } });
+            k.noise(input, { t, color: 'crackle', dur: total, a: 0.02, r: 0.2, peak: 0.55, filter: { type: 'highpass', f: 1800 } });
+            k.tone(input, { t, f: [[0, 600], [total, 900]], type: 'triangle', dur: total, a: 0.05, r: 0.15, peak: 0.07, vib: { rate: 11, depth: 20 } });
+        } else {
+            k.noise(input, { t, color: 'pink', dur: total, a: 0.1, r: 0.25, peak: 0.5, filter: { type: 'bandpass', f: 800, q: 0.7 } });
+            k.noise(input, { t, color: 'brown', dur: total, a: 0.1, r: 0.25, peak: 0.45, filter: { type: 'lowpass', f: 380 } });
+            for (let i = 0; i < 6; i++) {
+                const t0 = t + Math.random() * total, f0 = 200 + Math.random() * 300;
+                k.tone(input, { t: t0, f: [[0, f0], [0.06, f0 * 2.3]], dur: 0.08, a: 0.004, r: 0.05, peak: 0.12 });
+            }
         }
         path.forEach((d, i) => { if (i < path.length - 1) this.#marker(d, input, t + i * stepS, 0.5); });
         this.#release({ nodes }, t + total);

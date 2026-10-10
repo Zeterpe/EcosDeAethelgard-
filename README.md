@@ -56,6 +56,16 @@ Para generarlos: **[CONFIGURAR_VOCES.md](CONFIGURAR_VOCES.md)** (crear el recurs
 - **Práctica libre**: sin vidas ni puntos; cada error se explica.
 - **Biblioteca**: bestiario con el sonido de cada criatura (en las cuatro posiciones), grimorio de hechizos, sonidos de posición y archivo de la historia.
 
+## Criaturas raras
+
+A partir del nivel 13 aparecen tres criaturas que piden escuchar de otra manera (la voz no dice por dónde vienen, salvo en Aprendiz y con audio mono):
+
+- **Fuego Errante** (nivel 13): se mueve antes de atacar; apunta a donde termina su llama.
+- **Gemelos de Piedra** (nivel 17): suenan a la vez en dos posiciones; hay que alcanzar a los dos, uno detrás de otro, en el mismo turno.
+- **Susurro de Bruma** (nivel 22): suena muy bajo y una sola vez.
+
+También salen en las rutas, en la Arena desde la oleada 8 y, una vez conocidas, en la Práctica libre. Sus textos nuevos se leen con la voz del sistema hasta que se vuelva a lanzar **Generar narración**.
+
 ## Guardianes
 
 Cada jefe tiene su propia voz y una mecánica única:

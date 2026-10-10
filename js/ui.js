@@ -27,6 +27,7 @@ const UI = {
         document.querySelectorAll('.screen').forEach(el => { this.screens[el.id.replace('screen-', '')] = el; });
         document.addEventListener('focusin', e => this._onFocus(e));
         speech.onCaption = text => this.caption(text);
+        document.addEventListener('touchstart', () => { this.touched = true; }, { capture: true, passive: true, once: true });
         this._watchA11y();
     },
 
@@ -684,11 +685,12 @@ const CombatView = {
         const info = [];
         if (turn.warning) info.push(turn.warning);
         if (turn.inst.maxLives > 1) info.push(`Vidas: ${turn.inst.lives}/${turn.inst.maxLives}`);
-        if (showDir) info.push(`${DIRECTIONS[turn.dir].label} ${DIRECTIONS[turn.dir].name}`);
+        const dirs = turn.pair || [turn.dir];   // los Gemelos están en dos posiciones a la vez
+        if (showDir) info.push(dirs.map(d => `${DIRECTIONS[d].label} ${DIRECTIONS[d].name}`).join(' y '));
         else if (visual) info.push('Posición oculta: ¡escucha!');
         $('enemy-info').textContent = info.join(' · ');
         document.querySelectorAll('.radar .slot[data-dir]').forEach(s => {
-            const on = showDir && s.dataset.dir === turn.dir;
+            const on = showDir && dirs.includes(s.dataset.dir);
             s.classList.toggle('active', on);
             s.querySelector('.slot-icon').textContent = on ? def.icon : '';
         });
@@ -723,7 +725,8 @@ const CombatView = {
     },
     /** Vibración (solo en los móviles que la admiten; en iPhone no existe). */
     _vibrate(pattern) {
-        if (!UI.settings.vibration) return;
+        // Solo tras tocar la pantalla: sin eso el navegador la bloquea y llena la consola de avisos.
+        if (!UI.settings.vibration || !UI.touched) return;
         try { navigator.vibrate?.(pattern); } catch (_) { /* no disponible */ }
     },
     hurt() { this._flash('flash-hurt'); this._vibrate(180); },

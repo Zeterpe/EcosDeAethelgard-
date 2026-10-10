@@ -128,9 +128,11 @@ export function secciones({ L, X, D }) {
     const S = D.STORY_LINES;
     for (let n = 1; n <= D.COMMON_LEVELS; n++) add(`level_${n}`, [S.campaignIntro(n)], 'narrador');
     for (const r of D.ROUTE_IDS) for (let n = 1; n <= D.ROUTE_LEVELS; n++) add(`route_${r}_${n}`, [S.routeIntro(r, n)], 'narrador');
-    for (const id of D.ALL_COMMON) {
+    for (const id of [...D.ALL_COMMON, ...D.SPECIALS]) {
         add(`meet_${id}_1`, [S.meetName(D.ENEMIES[id])], 'narrador');
         add(`meet_${id}_2`, [S.meetWeak(D.ENEMIES[id])], 'narrador');
+        // Las criaturas raras explican además cómo hay que escucharlas.
+        if (D.ENEMIES[id].tip) add(`meet_${id}_3`, [S.meetTip(D.ENEMIES[id])], 'narrador');
     }
     return s;
 }

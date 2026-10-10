@@ -498,10 +498,33 @@ const App = (() => {
         if (c === 'retry') retry(); else goMenu();
     }
 
+    /** Hace sonar una criatura rara como sonará en combate. Devuelve los segundos que dura. */
+    function demoCreature(def) {
+        if (def.mechanic === 'wander') {
+            const delay = audio.playSweep(['left', 'right'], 0.4, 'wisp');
+            return delay + audio.playVoice(def.voice, 'right', { delay });
+        }
+        if (def.mechanic === 'twins') {
+            audio.playVoice(def.voice, 'left');
+            return audio.playVoice(def.voice, 'right', { delay: 0.09, pitch: 1.12 });
+        }
+        if (def.mechanic === 'hush') return audio.playVoice(def.voice, 'left', { whisper: true });
+        return audio.playVoice(def.voice, 'center');
+    }
+
+    /**
+     * Criaturas de un nivel que hay que presentar: las que aún no se conocen y las raras cuyo
+     * consejo no se ha oído (se pueden haber encontrado antes en la Arena, sin explicación).
+     */
+    function toIntroduce(pool) {
+        return pool.filter(id => !profile.met.includes(id) || (ENEMIES[id].tip && !profile.loreSeen.includes(`tip_${id}`)));
+    }
+
     /** Presenta las criaturas que el jugador aún no conoce. */
     async function introduceEnemies(ids, alive) {
         for (const id of ids) {
             const def = ENEMIES[id];
+            if (def.tip && !profile.loreSeen.includes(`tip_${id}`)) profile.loreSeen.push(`tip_${id}`);
             if (!profile.met.includes(id)) profile.met.push(id);
             const loreKey = `creature_${id}`;
             const tellLore = LORE.creatures[id] && !profile.loreSeen.includes(loreKey);
@@ -521,6 +544,13 @@ const App = (() => {
             audio.playVoice(def.voice, 'center');
             await sleep(1900);
             if (!alive()) return false;
+            if (def.tip) {
+                // Criaturas raras: se explica cómo escucharlas y suenan como sonarán en combate.
+                await Narration.run([STORY_LINES.meetTip(def)], { title: def.name, key: `meet_${id}_3` });
+                if (!alive()) return false;
+                await sleep(demoCreature(def) * 1000 + 700);
+                if (!alive()) return false;
+            }
         }
         if (ALL_COMMON.every(id => profile.met.includes(id))) unlockAch('bestiary');
         return true;
@@ -664,7 +694,7 @@ const App = (() => {
             await Narration.run(LORE_EXTRA.shadow[n], { title: 'Sombra Imitadora', key: `shadow_${n}` });
             if (!alive()) return;
         }
-        if (!await introduceEnemies(def.pool.filter(id => !profile.met.includes(id)), alive)) return;
+        if (!await introduceEnemies(toIntroduce(def.pool), alive)) return;
 
         await Narration.run([STORY_LINES.campaignIntro(n)], { title: `Nivel ${n}`, key: `level_${n}` });
         if (!alive()) return;
@@ -856,7 +886,7 @@ const App = (() => {
         showCombat(title, `Ruta de ${R.name} · Nivel ${n} de ${ROUTE_LEVELS}${mod ? ' · ' + mod.name : ''}`);
         music.play(R.theme, { intensity: 1 });
         audio.setReverb(R.reverb);
-        if (!await introduceEnemies(def.pool.filter(id => !profile.met.includes(id)), alive)) return;
+        if (!await introduceEnemies(toIntroduce(def.pool), alive)) return;
         await Narration.run([STORY_LINES.routeIntro(r, n)], { title, key: `route_${r}_${n}` });
         if (!alive()) return;
         const result = await runEncounter({
@@ -1166,7 +1196,7 @@ const App = (() => {
 
     function arenaWave(w) {
         const count = Math.min(20, 4 + w);
-        const pool = w < 3 ? BASICS : w < 6 ? [...BASICS, 'magma_elem', 'storm_spec'] : ALL_COMMON;
+        const pool = w < 3 ? BASICS : w < 6 ? [...BASICS, 'magma_elem', 'storm_spec'] : w < 8 ? ALL_COMMON : POOL_RARAS;
         const bag = buildBag({ count, pool, elite: Math.min(0.5, 0.06 * w) });
         if (w % CFG.ARENA_BOSS_EVERY === 0) {
             const r = ROUTE_IDS[(w / CFG.ARENA_BOSS_EVERY - 1) % ROUTE_IDS.length];
@@ -1228,7 +1258,7 @@ const App = (() => {
             { label: 'Criaturas élite', sub: 'Practica los dúos críticos', icon: '🌋', action: () => startPractice('Criaturas élite', ELITES, 1) },
             { label: 'Todas las criaturas comunes', sub: 'Básicas y élite mezcladas', icon: '🌀', action: () => startPractice('Todas las criaturas', ALL_COMMON, 2) },
         ];
-        const special = ['shadow', ...GUARDIANS, 'final_boss'].filter(id => profile.met.includes(id));
+        const special = [...SPECIALS, 'shadow', ...GUARDIANS, 'final_boss'].filter(id => profile.met.includes(id));
         special.forEach(id => {
             const d = ENEMIES[id];
             items.push({ label: d.name, sub: TIER_LABELS[d.tier], icon: d.icon, action: () => startPractice(d.name, [id], items.length) });
@@ -1300,7 +1330,8 @@ const App = (() => {
         if (def.mechanic === 'mimic') return 'Su debilidad es la de la criatura que imita.';
         if (def.mechanic === 'shift') return 'Cambia de elemento: respóndele cada vez como a un guardián de ese elemento.';
         return `${weaknessText(profileOf(def))} Nunca uses ${elementNames(def.cure)}.` +
-            (def.critCure ? ` Y nunca ${def.critCure}: la curación crítica.` : '');
+            (def.critCure ? ` Y nunca ${def.critCure}: la curación crítica.` : '') +
+            (def.tip ? ` ${def.tip}` : '');
     }
 
     function openBestiary(focusIndex = 0) {
@@ -1342,6 +1373,7 @@ const App = (() => {
             text: `${TIER_LABELS[d.tier]}. ${d.desc}\n${bestiaryWeakText(d)}`,
             buttons: [
                 { label: 'Escuchar', keep: true, action: () => audio.playVoice(d.voice, 'center') },
+                ...(d.tip ? [{ label: 'Escuchar como suena en combate', keep: true, action: () => demoCreature(d) }] : []),
                 { label: 'Escuchar en las cuatro posiciones', keep: true, action: () => playAllDirections(d.voice) },
                 ...(LORE.creatures[id] && profile.met.includes(id) ? [{ label: 'Escuchar su historia', value: 'lore' }] : []),
                 { label: 'Practicar contra esta criatura', value: 'practice' },
@@ -1562,6 +1594,7 @@ const App = (() => {
             { t: 'Medallas', x: 'Cada nivel de la historia que superas te da una medalla: oro si no recibes ningún golpe, plata si recibes uno solo y bronce si lo superas. En Repetir niveles, en el menú principal, puedes volver a jugar cualquier nivel superado para mejorar tu medalla.' },
             { t: 'Pantalla táctil', x: 'En móviles y tabletas puedes usar los botones de la pantalla o gestos sobre el campo de batalla. Toca con un dedo para el Agua, con dos para el Fuego, con tres para la Tierra y con cuatro para el Viento; después desliza un dedo hacia el enemigo para lanzar el hechizo. Para un dúo, haz los dos toques seguidos y luego desliza. Deslizar dos dedos repite el enemigo, y deslizar tres dedos pausa. Si usas VoiceOver o TalkBack, el lector se queda con los gestos: desactívalo mientras combates, que el juego tiene su propia voz.' },
             { t: 'Niveles especiales', x: 'Frenesí: los enemigos llegan más rápido. Niebla: no se anuncia la posición, solo la oyes. Élite: solo criaturas de dos elementos. En los niveles 15 y 25 acecha la Sombra Imitadora: imita a otras criaturas y debes responderle como a la criatura que imita.' },
+            { t: 'Criaturas raras', x: 'A partir del nivel 13 aparecen tres criaturas que piden escuchar de otra manera, y la voz no dice por dónde vienen. El Fuego Errante se mueve antes de atacar: apunta a donde termina su llama. Los Gemelos de Piedra suenan a la vez en dos posiciones: alcanza a los dos, uno detrás de otro, en el mismo turno. El Susurro de Bruma suena muy bajo y una sola vez. En dificultad Aprendiz y con audio mono, la voz sí anuncia sus posiciones.' },
             { t: 'Guardianes', x: 'Cada guardián tiene una mecánica propia. Ignar lanza brasas: apágalas con Agua. El Leviatán se desplaza antes de atacar: apunta a donde termina. Zael lanza ecos falsos y lejanos: apunta al grito cercano. Rok alza un escudo de piedra: cuando lo oigas, no ataques. El Avatar del Silencio cambia de elemento sin parar.' },
             { t: 'Modos de juego', x: 'Historia: treinta niveles, cuatro rutas con sus guardianes y un enemigo final. Arena: oleadas infinitas con récord. Práctica libre: sin vidas ni puntos. Entrenamiento: aprende paso a paso.' },
             { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. La historia tiene su propia velocidad, aparte de la del resto del juego. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },

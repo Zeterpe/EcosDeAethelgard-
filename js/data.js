@@ -6,7 +6,7 @@
 'use strict';
 
 /** Versión del juego. Al publicar cambios, súbela también en los ?v= de index.html. */
-const GAME_VERSION = { id: '20261010a', spoken: '10 de octubre de 2026' };
+const GAME_VERSION = { id: '20261010b', spoken: '10 de octubre de 2026' };
 
 // ═══════════════════════════════════════════════════════
 // Elementos y ciclo elemental
@@ -142,6 +142,28 @@ const ENEMIES = {
         voice: 'djinn', icon: '🧞',
         desc: 'Campanillas místicas sobre un remolino de arena. Viento y Tierra entrelazados.',
     },
+    // Criaturas raras: cada una pide escuchar de otra manera (aparecen a partir del nivel 13).
+    wisp_fire: {
+        id: 'wisp_fire', name: 'Fuego Errante', short: 'Errante', tier: 'rare', lives: 1,
+        elements: ['fuego'], weak: ['agua'], cure: ['fuego'], critHit: null, critCure: null,
+        voice: 'wisp', icon: '🕯️', mechanic: 'wander',
+        desc: 'Una llama pequeña que silba y chisporrotea mientras cambia de sitio.',
+        tip: 'El Fuego Errante se mueve antes de atacar. Oirás su llama ir de un lado a otro: apunta a donde termina, no a donde empieza.',
+    },
+    twins_earth: {
+        id: 'twins_earth', name: 'Gemelos de Piedra', short: 'Gemelos', tier: 'rare', lives: 2, plural: true,
+        elements: ['tierra'], weak: ['viento'], cure: ['tierra'], critHit: null, critCure: null,
+        voice: 'twins', icon: '🪨', mechanic: 'twins',
+        desc: 'Dos guijarros que chocan entre sí. Suenan a la vez desde dos sitios distintos.',
+        tip: 'Los Gemelos de Piedra son dos y atacan a la vez desde dos posiciones. Tienes que alcanzar a los dos, uno detrás de otro, antes de que se acabe el tiempo.',
+    },
+    hush_water: {
+        id: 'hush_water', name: 'Susurro de Bruma', short: 'Susurro', tier: 'rare', lives: 1,
+        elements: ['agua'], weak: ['tierra'], cure: ['agua'], critHit: null, critCure: null,
+        voice: 'hush', icon: '🌫️', mechanic: 'hush',
+        desc: 'Un soplo húmedo, casi una nana, tan bajo que cuesta oírlo.',
+        tip: 'El Susurro de Bruma suena muy bajo y una sola vez: no se puede repetir. Guarda silencio y escucha de dónde viene.',
+    },
     ember: {
         id: 'ember', name: 'Brasa de la Forja', short: 'Brasa', tier: 'minion', lives: 1,
         elements: ['fuego'], weak: ['agua'], cure: ['fuego'], critHit: null, critCure: null,
@@ -189,11 +211,16 @@ const ENEMIES = {
 const BASICS = ['wolf_fire', 'frog_water', 'bat_wind', 'golem_earth'];
 const ELITES = ['magma_elem', 'storm_spec', 'ent_forest', 'djinn_desert'];
 const ALL_COMMON = [...BASICS, ...ELITES];
+const SPECIALS = ['wisp_fire', 'twins_earth', 'hush_water'];   // criaturas raras
 const GUARDIANS = ['boss_fire', 'boss_water', 'boss_wind', 'boss_earth'];
-const BESTIARY_ORDER = [...BASICS, ...ELITES, 'ember', 'shadow', ...GUARDIANS, 'final_boss'];
+const BESTIARY_ORDER = [...BASICS, ...ELITES, ...SPECIALS, 'ember', 'shadow', ...GUARDIANS, 'final_boss'];
+// Las raras se van sumando a la historia: el Errante en el nivel 13, los Gemelos en el 17 y el Susurro en el 22.
+const POOL_ERRANTE = [...ALL_COMMON, 'wisp_fire'];
+const POOL_GEMELOS = [...POOL_ERRANTE, 'twins_earth'];
+const POOL_RARAS = [...ALL_COMMON, ...SPECIALS];
 
 const TIER_LABELS = {
-    basic: 'Criatura básica', elite: 'Criatura élite', minion: 'Esbirro',
+    basic: 'Criatura básica', elite: 'Criatura élite', rare: 'Criatura rara', minion: 'Esbirro',
     miniboss: 'Enemigo especial', boss: 'Guardián', final: 'Enemigo final',
 };
 
@@ -205,12 +232,12 @@ const ROUTES = {
     fire: {
         id: 'fire', name: 'Fuego', place: 'Las Tierras de Escoria', dir: 'up', element: 'fuego',
         boss: 'boss_fire', guardian: 'Ignar', achievement: 'branch_fire', theme: 'fire', reverb: 'hall', icon: '🔥',
-        pool: ['wolf_fire', 'frog_water', 'magma_elem', 'djinn_desert'],
+        pool: ['wolf_fire', 'frog_water', 'magma_elem', 'djinn_desert', 'wisp_fire'],
     },
     water: {
         id: 'water', name: 'Agua', place: 'Las Fosas Abisales', dir: 'down', element: 'agua',
         boss: 'boss_water', guardian: 'la Gran Corriente', achievement: 'branch_water', theme: 'water', reverb: 'cave', icon: '💧',
-        pool: ['frog_water', 'wolf_fire', 'storm_spec', 'ent_forest'],
+        pool: ['frog_water', 'wolf_fire', 'storm_spec', 'ent_forest', 'hush_water'],
     },
     wind: {
         id: 'wind', name: 'Viento', place: 'La Meseta de los Ecos Rotos', dir: 'left', element: 'viento',
@@ -220,7 +247,7 @@ const ROUTES = {
     earth: {
         id: 'earth', name: 'Tierra', place: 'El Corazón de Piedra', dir: 'right', element: 'tierra',
         boss: 'boss_earth', guardian: 'Rok', achievement: 'branch_earth', theme: 'earth', reverb: 'cave', icon: '🪨',
-        pool: ['golem_earth', 'bat_wind', 'ent_forest', 'magma_elem'],
+        pool: ['golem_earth', 'bat_wind', 'ent_forest', 'magma_elem', 'twins_earth'],
     },
 };
 const ROUTE_IDS = ['fire', 'water', 'wind', 'earth'];
@@ -255,24 +282,24 @@ const CAMPAIGN = [
     /* 10 */ { count: 8, react: 4400, pool: [...BASICS, 'magma_elem'], elite: 0.3 },
     /* 11 */ { count: 9, react: 4200, pool: [...BASICS, 'magma_elem', 'storm_spec'], elite: 0.25 },
     /* 12 */ { count: 9, react: 4100, pool: [...BASICS, 'magma_elem', 'storm_spec', 'ent_forest'], elite: 0.25 },
-    /* 13 */ { count: 10, react: 4000, pool: ALL_COMMON, elite: 0.25 },
-    /* 14 */ { count: 10, react: 3900, pool: ALL_COMMON, elite: 0.25, modifier: 'frenzy' },
+    /* 13 */ { count: 10, react: 4000, pool: POOL_ERRANTE, elite: 0.25 },
+    /* 14 */ { count: 10, react: 3900, pool: POOL_ERRANTE, elite: 0.25, modifier: 'frenzy' },
     /* 15 */ { count: 4, react: 3900, pool: BASICS, miniboss: { lives: 6, mimic: BASICS } },
-    /* 16 */ { count: 11, react: 3700, pool: ALL_COMMON, elite: 0.3 },
-    /* 17 */ { count: 11, react: 3600, pool: ALL_COMMON, elite: 0.3 },
-    /* 18 */ { count: 10, react: 3700, pool: ALL_COMMON, elite: 0.3, modifier: 'fog' },
-    /* 19 */ { count: 12, react: 3450, pool: ALL_COMMON, elite: 0.32 },
-    /* 20 */ { count: 12, react: 3400, pool: ALL_COMMON, elite: 0.33 },
-    /* 21 */ { count: 12, react: 3300, pool: ALL_COMMON, elite: 0.35, modifier: 'frenzy' },
-    /* 22 */ { count: 12, react: 3250, pool: ALL_COMMON, elite: 0.35 },
-    /* 23 */ { count: 12, react: 3350, pool: ALL_COMMON, elite: 0.36, modifier: 'fog' },
-    /* 24 */ { count: 13, react: 3150, pool: ALL_COMMON, elite: 0.38 },
+    /* 16 */ { count: 11, react: 3700, pool: POOL_ERRANTE, elite: 0.3 },
+    /* 17 */ { count: 11, react: 3600, pool: POOL_GEMELOS, elite: 0.3 },
+    /* 18 */ { count: 10, react: 3700, pool: POOL_GEMELOS, elite: 0.3, modifier: 'fog' },
+    /* 19 */ { count: 12, react: 3450, pool: POOL_GEMELOS, elite: 0.32 },
+    /* 20 */ { count: 12, react: 3400, pool: POOL_GEMELOS, elite: 0.33 },
+    /* 21 */ { count: 12, react: 3300, pool: POOL_GEMELOS, elite: 0.35, modifier: 'frenzy' },
+    /* 22 */ { count: 12, react: 3250, pool: POOL_RARAS, elite: 0.35 },
+    /* 23 */ { count: 12, react: 3350, pool: POOL_RARAS, elite: 0.36, modifier: 'fog' },
+    /* 24 */ { count: 13, react: 3150, pool: POOL_RARAS, elite: 0.38 },
     /* 25 */ { count: 5, react: 3200, pool: ALL_COMMON, elite: 0.3, miniboss: { lives: 8, mimic: ALL_COMMON } },
-    /* 26 */ { count: 14, react: 3050, pool: ALL_COMMON, elite: 0.4 },
+    /* 26 */ { count: 14, react: 3050, pool: POOL_RARAS, elite: 0.4 },
     /* 27 */ { count: 8, react: 3200, pool: ELITES, modifier: 'elite' },
-    /* 28 */ { count: 13, react: 3150, pool: ALL_COMMON, elite: 0.42, modifier: 'fog' },
-    /* 29 */ { count: 15, react: 2950, pool: ALL_COMMON, elite: 0.45, modifier: 'frenzy' },
-    /* 30 */ { count: 16, react: 2900, pool: ALL_COMMON, elite: 0.45 },
+    /* 28 */ { count: 13, react: 3150, pool: POOL_RARAS, elite: 0.42, modifier: 'fog' },
+    /* 29 */ { count: 15, react: 2950, pool: POOL_RARAS, elite: 0.45, modifier: 'frenzy' },
+    /* 30 */ { count: 16, react: 2900, pool: POOL_RARAS, elite: 0.45 },
 ];
 
 /** Ecos que suenan al COMENZAR un nivel. El eco 30 suena al superarlo. */
@@ -333,7 +360,7 @@ const DIFFICULTY_IDS = ['aprendiz', 'invocador', 'archimago'];
 
 const SCORE = {
     hit: 100, crit: 250, shieldBlock: 150, speedBonus: 0.5,
-    kill: { basic: 50, minion: 25, elite: 200, miniboss: 800, boss: 1500, final: 5000 },
+    kill: { basic: 50, minion: 25, rare: 150, elite: 200, miniboss: 800, boss: 1500, final: 5000 },
     wave: 300, level: 500, flawless: 1000,
 };
 
@@ -522,6 +549,8 @@ const STORY_LINES = {
     },
     meetName(def) { return `¡Nueva criatura! ${def.name}. ${def.desc} Escucha.`; },
     meetWeak(def) { return `${weaknessText(def)} Nunca uses ${elementNames(def.cure)}: la curarías. Escucha otra vez.`; },
+    /** Criaturas raras: cómo hay que escucharlas. */
+    meetTip(def) { return `${def.tip} Así sonará en combate.`; },
 };
 
 /** Describe cómo vencer a un perfil de combate (para pistas y bestiario). */
@@ -536,7 +565,7 @@ function weaknessText(profile) {
 }
 
 // Artículos para frases naturales («La Rana te ataca», «Ignar te ataca»).
-const ENEMY_ARTICLES = { frog_water: 'la', ember: 'la', shadow: 'la', boss_fire: '', boss_wind: '', boss_earth: '' };
+const ENEMY_ARTICLES = { frog_water: 'la', ember: 'la', shadow: 'la', twins_earth: 'los', boss_fire: '', boss_wind: '', boss_earth: '' };
 for (const e of Object.values(ENEMIES)) e.art = ENEMY_ARTICLES[e.id] ?? 'el';
 
 function capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
@@ -546,5 +575,6 @@ function shortWithArt(def) { return def.art ? `${def.art} ${def.short}` : def.sh
 function nameWithArt(def) { return def.art ? `${def.art} ${def.name}` : def.name; }
 function defeatedWord(def) {
     if (def.tier === 'boss') return 'purificado';
+    if (def.plural) return 'derrotados';
     return def.art === 'la' ? 'derrotada' : 'derrotado';
 }

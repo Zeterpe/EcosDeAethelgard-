@@ -930,6 +930,44 @@ LORE.creatures = {
         `duele, pero deja sitio para que algo vuelva a crecer.`,
     ],
 
+    wisp_fire: [
+        `Fuego Errante. Antes del Silencio se llamaban Faroles del Camino. ` +
+        `Eran chispas del Primer Canto que no quisieron quedarse en ninguna fragua: ` +
+        `preferían acompañar a los viajeros de noche, de aldea en aldea, ` +
+        `y esperar en los cruces hasta que pasara alguien que no supiera el camino. ` +
+        `Los cantares dicen que ningún caminante de Aethelgard se perdió mientras tuvo un farol delante.`,
+
+        `El Silencio no les quitó la luz. Les quitó el camino. ` +
+        `Ahora van de un lado a otro sin llegar a ninguna parte, ` +
+        `y atacan desde el sitio en el que acaban, nunca desde donde empezaron. ` +
+        `Escucha adónde va la llama, y deja que el Agua la apague con cuidado: ` +
+        `lleva demasiado tiempo buscando a quién guiar.`,
+    ],
+
+    twins_earth: [
+        `Gemelos de Piedra. Cuando Rok dejaba caer piedras de su memoria, ` +
+        `a veces una se partía en dos al tocar el suelo. ` +
+        `Las dos mitades guardaban el mismo recuerdo, repartido: una la pregunta y la otra la respuesta. ` +
+        `Por eso nunca se separaban. Los aprendices de la Academia jugaban con ellos a las adivinanzas, y perdían siempre.`,
+
+        `Cuando Rok empezó a olvidar, los gemelos olvidaron cuál de los dos preguntaba y cuál respondía. ` +
+        `Ahora chocan el uno contra el otro, buscando encajar, y atacan a la vez desde dos sitios distintos. ` +
+        `El Viento los mueve, pero con uno solo no basta: ` +
+        `tienes que alcanzar a los dos antes de que se acabe el tiempo.`,
+    ],
+
+    hush_water: [
+        `Susurro de Bruma. En las costas de Aethelgard, cuando los niños no podían dormir, ` +
+        `la niebla entraba por la ventana y les cantaba muy bajito. ` +
+        `Eran los susurros: las notas más pequeñas del Coro, hermanas menores de los Cantores de Bruma. ` +
+        `Nadie los vio nunca, porque solo salían cuando ya no quedaba nadie despierto.`,
+
+        `El Silencio casi se los llevó enteros. De su nana solo queda un hilo de voz, ` +
+        `tan bajo que apenas se distingue del aire, y suena una sola vez. ` +
+        `No esperes que nadie te diga por dónde viene: guarda silencio tú también, escucha, ` +
+        `y deja que la Tierra recoja la bruma como la recoge la orilla.`,
+    ],
+
     djinn_desert: [
         `Djinn del Desierto. Allí donde Zael no podía llegar, en los desiertos del este, sus mensajes los llevaban los djinn: ` +
         `remolinos de arena y viento con campanillas, que se adelantaban a las caravanas para anunciar su llegada. ` +
