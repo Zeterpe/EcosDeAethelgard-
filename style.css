@@ -677,6 +677,11 @@ label.check input {
     border-color: var(--accent-dim);
 }
 
+/* Con los gestos táctiles activados, tocar el campo de batalla no desplaza la página. */
+.gestures .stage {
+    touch-action: none;
+}
+
 .stage.shielded {
     border-color: var(--tierra);
     box-shadow: 0 0 0 3px rgba(199, 154, 91, 0.35) inset;

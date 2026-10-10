@@ -1,0 +1,29 @@
+# Comprobaciones automáticas del juego en cada rama y en cada pull request:
+# versión, orden de los scripts, narración y lógica (hechizos, duelos, rachas, medallas, partidas guardadas).
+# No necesita secretos ni instala nada. Es lo mismo que «node tools/comprobar.mjs» en tu ordenador.
+name: Comprobar el juego
+
+on:
+  push:
+    paths-ignore:
+      - 'audio/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Descargar el juego
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Comprobar versión, narración y lógica
+        run: node tools/comprobar.mjs

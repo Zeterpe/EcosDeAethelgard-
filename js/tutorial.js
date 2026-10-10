@@ -1,27 +1,33 @@
 /* =============================================
    ECOS DE AETHELGARD — tutorial.js
-   Entrenamiento guiado, sin tiempo ni daño:
-   auriculares, direcciones, elementos, ciclo
-   elemental, hechizos simples, dúos y controles.
+   Entrenamiento guiado, sin tiempo ni daño, por
+   capítulos: auriculares, direcciones, elementos,
+   ciclo elemental, hechizos, dúos y controles.
+   Se puede empezar en cualquier capítulo.
    ============================================= */
 'use strict';
 
 class Tutorial {
-    #d;                 // audio, speech, input, settings, ui, confirmExit, onEvent
+    /** Capítulos, en orden. Al elegir uno, el entrenamiento sigue desde ahí hasta el final. */
+    static CHAPTERS = ['Auriculares', 'Direcciones', 'Elementos', 'El ciclo elemental', 'Hechizos', 'Dúos', 'Controles y consejos'];
+
+    #d;                 // audio, speech, input, settings, ui, confirmExit, onChapter
     #gen = 0;
     #eventWaiter = null;
     #running = false;
+    #pauseAsked = false;
     debugExpect = null;   // respuesta esperada (solo para pruebas automáticas)
 
     constructor(deps) { this.#d = deps; }
 
     get running() { return this.#running; }
 
-    /** Devuelve una promesa: 'done' si se completa, 'exit' si se abandona. */
-    start() {
+    /** from: capítulo por el que empezar. Devuelve una promesa: 'done' si se llega al final, 'exit' si se abandona. */
+    start(from = 0) {
         this.stop();
         const gen = ++this.#gen;
         this.#running = true;
+        this.#pauseAsked = false;
         const input = this.#d.input;
         input.reset();
         input.handler = {
@@ -30,7 +36,7 @@ class Tutorial {
             onAim: d => this.#emit({ type: 'aim', dir: d }),
             onCommand: c => this.#emit({ type: 'command', id: c }),
         };
-        return this.#run(gen).then(ok => {
+        return this.#run(gen, clamp(Math.floor(+from || 0), 0, Tutorial.CHAPTERS.length - 1)).then(ok => {
             if (gen === this.#gen) { this.#running = false; this.#d.input.handler = null; }
             return ok ? 'done' : 'exit';
         });
@@ -39,6 +45,7 @@ class Tutorial {
     stop() {
         this.#gen++;
         this.#running = false;
+        this.debugExpect = null;
         const w = this.#eventWaiter;
         this.#eventWaiter = null;
         w?.(null);
@@ -46,9 +53,21 @@ class Tutorial {
 
     #emit(evt) {
         const w = this.#eventWaiter;
-        if (!w) return;
+        if (!w) {
+            // Durante una explicación no hay ejercicio esperando: Escape corta la frase y pregunta si salir.
+            if (evt.type === 'command' && evt.id === 'pause' && this.#running) { this.#pauseAsked = true; this.#d.speech.cancel(); }
+            return;
+        }
         this.#eventWaiter = null;
         w(evt);
+    }
+
+    /** Si se pidió salir durante una explicación, lo pregunta. Devuelve true si hay que salir. */
+    async #leaving(gen) {
+        if (!this.#pauseAsked) return gen !== this.#gen;
+        this.#pauseAsked = false;
+        const exit = await this.#d.confirmExit();
+        return exit || gen !== this.#gen;
     }
 
     #nextEvent(gen) {
@@ -110,151 +129,189 @@ class Tutorial {
         for (let i = 0; i < lines.length; i++) {
             if (gen !== this.#gen) return false;
             await this.#say(gen, lines[i]);
+            if (this.#pauseAsked) {
+                if (await this.#leaving(gen)) return false;
+                i--;                // se quedó a medias: la frase se repite
+                continue;
+            }
             if (playAfter[i]) { playAfter[i](); await this.#wait(1700); }
             await this.#wait(250);
         }
-        return gen === this.#gen;
+        return !(await this.#leaving(gen));
     }
 
-    async #run(gen) {
+    async #run(gen, from) {
         const a = this.#d.audio, k = this.#keys();
         const ok = () => gen === this.#gen;
 
-        // 1. Bienvenida y auriculares
-        if (!await this.#explain(gen, [
-            'Bienvenido al entrenamiento de la Academia de los Ecos. Aquí nada puede hacerte daño y no hay prisa.',
-            'Si en algún momento quieres repetir una instrucción, pulsa Espacio. Para salir, pulsa Escape.',
-            'Primero, comprueba tus auriculares. Ahora sonará algo a tu izquierda.',
-        ])) return false;
-        a.playVoice('frog', 'left');
-        await this.#wait(1500);
-        if (!ok()) return false;
-        await this.#say(gen, 'Y ahora, a tu derecha.');
-        a.playVoice('frog', 'right');
-        await this.#wait(1500);
-        if (!await this.#explain(gen, [
-            'Si lo has oído al revés, gira tus auriculares. Si solo oyes por un oído, activa el audio mono en Opciones: la voz te dirá siempre la dirección.',
-        ])) return false;
+        const chapters = [
+            // 1. Bienvenida y auriculares
+            async () => {
+                if (!await this.#explain(gen, [
+                    'Bienvenido al entrenamiento de la Academia de los Ecos. Aquí nada puede hacerte daño y no hay prisa.',
+                    'Si en algún momento quieres repetir una instrucción, pulsa Espacio. Para salir, pulsa Escape: la próxima vez podrás seguir por donde lo dejaste.',
+                    'Primero, comprueba tus auriculares. Ahora sonará algo a tu izquierda.',
+                ])) return false;
+                a.playVoice('frog', 'left');
+                await this.#wait(1500);
+                if (!ok()) return false;
+                await this.#say(gen, 'Y ahora, a tu derecha.');
+                a.playVoice('frog', 'right');
+                await this.#wait(1500);
+                return this.#explain(gen, [
+                    'Si lo has oído al revés, gira tus auriculares. Si solo oyes por un oído, activa el audio mono en Opciones: la voz te dirá siempre la dirección.',
+                ]);
+            },
 
-        // 2. Direcciones
-        if (!await this.#explain(gen, [
-            'Los enemigos aparecen en cuatro posiciones. Izquierda y derecha suenan en cada oído, con un chasquido de madera.',
-            'Arriba suena más agudo y brillante, y lo anuncia una campanilla.',
-            'Abajo suena más grave y apagado, y lo anuncia un golpe sordo.',
-        ], [null, () => a.playVoice('golem', 'up'), () => a.playVoice('golem', 'down')])) return false;
+            // 2. Direcciones
+            async () => {
+                if (!await this.#explain(gen, [
+                    'Los enemigos aparecen en cuatro posiciones. Izquierda y derecha suenan en cada oído, con un chasquido de madera.',
+                    'Arriba suena más agudo y brillante, y lo anuncia una campanilla.',
+                    'Abajo suena más grave y apagado, y lo anuncia un golpe sordo.',
+                ], [null, () => a.playVoice('golem', 'up'), () => a.playVoice('golem', 'down')])) return false;
 
-        if (!await this.#explain(gen, [
-            `Practiquemos. Cuando oigas un sonido, pulsa la flecha de su dirección. Solo la flecha, sin elementos.`,
-        ])) return false;
-        const dirRounds = [...shuffle(DIR_IDS), ...shuffle(DIR_IDS).slice(0, 2)];
-        for (let i = 0; i < dirRounds.length; i++) {
-            const dir = dirRounds[i];
-            const voice = pick(['golem', 'wolf', 'bat', 'frog']);
-            const res = await this.#exercise(gen, {
-                text: i === 0 ? 'Escucha.' : pick(['Escucha.', 'Otro.', '¿Y este?', 'Atento.']),
-                target: dir, expect: { kind: 'aim', dir },
-                play: () => a.playVoice(voice, dir),
-                accept: evt => {
-                    const got = evt.type === 'aim' ? evt.dir : evt.type === 'spell' ? evt.spell.dir : null;
-                    if (!got) return null;
-                    if (got === dir) { a.hit(dir); return { ok: true, msg: pick(['¡Bien!', '¡Exacto!', '¡Eso es!', '¡Perfecto!']) }; }
-                    return { ok: false, msg: `No: era ${DIRECTIONS[dir].name}. Escucha otra vez.` };
-                },
-            });
-            if (!res) return false;
-        }
+                if (!await this.#explain(gen, [
+                    `Practiquemos. Cuando oigas un sonido, pulsa la flecha de su dirección. Solo la flecha, sin elementos.`,
+                ])) return false;
+                const dirRounds = [...shuffle(DIR_IDS), ...shuffle(DIR_IDS).slice(0, 2)];
+                for (let i = 0; i < dirRounds.length; i++) {
+                    const dir = dirRounds[i];
+                    const voice = pick(['golem', 'wolf', 'bat', 'frog']);
+                    const res = await this.#exercise(gen, {
+                        text: i === 0 ? 'Escucha.' : pick(['Escucha.', 'Otro.', '¿Y este?', 'Atento.']),
+                        target: dir, expect: { kind: 'aim', dir },
+                        play: () => a.playVoice(voice, dir),
+                        accept: evt => {
+                            const got = evt.type === 'aim' ? evt.dir : evt.type === 'spell' ? evt.spell.dir : null;
+                            if (!got) return null;
+                            if (got === dir) { a.hit(dir); return { ok: true, msg: pick(['¡Bien!', '¡Exacto!', '¡Eso es!', '¡Perfecto!']) }; }
+                            return { ok: false, msg: `No: era ${DIRECTIONS[dir].name}. Escucha otra vez.` };
+                        },
+                    });
+                    if (!res) return false;
+                }
+                return ok();
+            },
 
-        // 3. Elementos
-        if (!await this.#explain(gen, [
-            'Ahora, los elementos. Cada uno tiene su tecla y su sonido.',
-        ])) return false;
-        for (const el of ELEMENT_IDS) {
-            const res = await this.#exercise(gen, {
-                text: `Pulsa ${k.spoken[el]}: ${ELEMENTS[el].name}.`, expect: { kind: 'element', id: el },
-                accept: evt => {
-                    if (evt.type !== 'element') return null;
-                    if (evt.id === el) { a.playElement(el); return { ok: true, msg: `${ELEMENTS[el].name}.` }; }
-                    return { ok: false, msg: `Esa es ${ELEMENTS[evt.id].name}. Busca la tecla ${k.spoken[el]}.` };
-                },
-            });
-            if (!res) return false;
-            await this.#wait(300);
-        }
+            // 3. Elementos
+            async () => {
+                if (!await this.#explain(gen, [
+                    'Ahora, los elementos. Cada uno tiene su tecla y su sonido.',
+                ])) return false;
+                for (const el of ELEMENT_IDS) {
+                    const res = await this.#exercise(gen, {
+                        text: `Pulsa ${k.spoken[el]}: ${ELEMENTS[el].name}.`, expect: { kind: 'element', id: el },
+                        accept: evt => {
+                            if (evt.type !== 'element') return null;
+                            if (evt.id === el) { a.playElement(el); return { ok: true, msg: `${ELEMENTS[el].name}.` }; }
+                            return { ok: false, msg: `Esa es ${ELEMENTS[evt.id].name}. Busca la tecla ${k.spoken[el]}.` };
+                        },
+                    });
+                    if (!res) return false;
+                    await this.#wait(300);
+                }
+                return ok();
+            },
 
-        // 4. Ciclo elemental
-        if (!await this.#explain(gen, LORE_EXTRA.cycle.slice(0, 4))) return false;
-        const quiz = [
-            { q: '¿Qué elemento vence al Fuego? Pulsa su tecla.', a: 'agua' },
-            { q: '¿Y a una criatura de Tierra?', a: 'viento' },
-            { q: '¿Y a una criatura de Agua?', a: 'tierra' },
-            { q: '¿Y a una de Viento?', a: 'fuego' },
+            // 4. Ciclo elemental
+            async () => {
+                if (!await this.#explain(gen, LORE_EXTRA.cycle.slice(0, 4))) return false;
+                const quiz = [
+                    { q: '¿Qué elemento vence al Fuego? Pulsa su tecla.', a: 'agua' },
+                    { q: '¿Y a una criatura de Tierra?', a: 'viento' },
+                    { q: '¿Y a una criatura de Agua?', a: 'tierra' },
+                    { q: '¿Y a una de Viento?', a: 'fuego' },
+                ];
+                for (const item of quiz) {
+                    const res = await this.#exercise(gen, {
+                        text: item.q, expect: { kind: 'element', id: item.a },
+                        accept: evt => {
+                            if (evt.type !== 'element') return null;
+                            if (evt.id === item.a) { a.playElement(evt.id); return { ok: true, msg: `¡Correcto! ${ELEMENTS[item.a].name}.` }; }
+                            const victim = ELEMENTS[item.a].beats, art = id => (id === 'tierra' ? 'la' : 'el');
+                            return { ok: false, msg: `No. Recuerda: ${art(item.a)} ${ELEMENTS[item.a].name} ${ELEMENTS[item.a].verb} ${art(victim)} ${ELEMENTS[victim].name}. Inténtalo de nuevo.` };
+                        },
+                    });
+                    if (!res) return false;
+                }
+                return ok();
+            },
+
+            // 5. Hechizos simples
+            async () => {
+                if (!await this.#explain(gen, [
+                    'Ya puedes lanzar hechizos. Pulsa la tecla del elemento y, enseguida, la flecha hacia el enemigo.',
+                    'Puedes mantener el elemento pulsado mientras pulsas la flecha, o soltarlo justo antes.',
+                ])) return false;
+                const guided = [
+                    { id: 'wolf_fire', dir: 'left', text: `Un Lobo de Fuego a tu izquierda. El Agua apaga el Fuego: pulsa ${k.spoken.agua} y luego ${k.spoken.left}.` },
+                    { id: 'frog_water', dir: 'right', text: `Una Rana de Agua a tu derecha. La Tierra la detiene: pulsa ${k.spoken.tierra} y luego ${k.spoken.right}.` },
+                    { id: 'bat_wind', dir: 'up', text: `Un Murciélago de Viento arriba. El Fuego lo doma: pulsa ${k.spoken.fuego} y luego ${k.spoken.up}.` },
+                    { id: 'golem_earth', dir: 'down', text: `Un Gólem de Tierra abajo. El Viento lo mueve: pulsa ${k.spoken.viento} y luego ${k.spoken.down}.` },
+                ];
+                for (const g of guided) if (!await this.#spellExercise(gen, g)) return false;
+
+                if (!await this.#explain(gen, ['Ahora sin ayuda. Escucha a la criatura y su posición, y responde.'])) return false;
+                for (const id of shuffle(BASICS).slice(0, 3)) {
+                    const dir = pick(DIR_IDS);
+                    if (!await this.#spellExercise(gen, { id, dir, text: `${ENEMIES[id].name}, ${DIRECTIONS[dir].name}.` })) return false;
+                }
+                return ok();
+            },
+
+            // 6. Dúos
+            async () => {
+                if (!await this.#explain(gen, [
+                    'Las criaturas élite tienen dos elementos y dos debilidades.',
+                    'Para herirlas de verdad, combina sus dos debilidades: pulsa las dos teclas de elemento a la vez y después la flecha. Es un golpe crítico: quita dos vidas.',
+                ])) return false;
+                const d1 = pick(DIR_IDS), d2 = pick(DIR_IDS);
+                if (!await this.#spellExercise(gen, {
+                    id: 'magma_elem', dir: d1,
+                    text: `Un Elemental de Magma, de Fuego y Tierra, ${DIRECTIONS[d1].name}. Es débil al Agua y al Viento. Lanza la Tormenta de Hielo: ${k.spoken.agua} y ${k.spoken.viento} a la vez, y luego ${k.spoken[d1]}.`,
+                    requireCrit: true,
+                })) return false;
+                return this.#spellExercise(gen, {
+                    id: 'storm_spec', dir: d2,
+                    text: `Un Espectro Tormenta, de Agua y Viento, ${DIRECTIONS[d2].name}. La Tierra vence al Agua y el Fuego vence al Viento. ¿Qué dúo usarás?`,
+                    requireCrit: true,
+                });
+            },
+
+            // 7. Controles y consejos
+            async () => {
+                if (!await this.#explain(gen, [
+                    'Durante el combate tienes un tiempo limitado para responder. Cuando se esté acabando, oirás un tic-tac cada vez más rápido.',
+                ])) return false;
+                for (let i = 0; i < 8; i++) { a.tick(i / 8); await this.#wait(420 - i * 35); }
+                if (!await this.#explain(gen, [
+                    'Si se agota el tiempo, el enemigo te ataca. Cada error te quita una vida.',
+                    'Cada cinco aciertos seguidos sube tu multiplicador de puntos, y las rachas largas te devuelven vidas.',
+                    'Si respondes muy deprisa, oirás un destello agudo después del golpe: son puntos extra.',
+                ], [null, null, () => a.quick()])) return false;
+                if (!await this.#explain(gen, [
+                    'Espacio repite el enemigo actual. H te da una pista sobre su debilidad. Escape pausa el juego.',
+                    'Y cuando ya reconozcas a las criaturas por su sonido, la tecla V apaga la voz que las anuncia. Vuelve a pulsarla para encenderla.',
+                    'En la historia oirás narraciones. Enter pasa al párrafo siguiente y Escape salta la narración entera.',
+                ])) return false;
+                return this.#exercise(gen, {
+                    text: 'Y Enter te dice tus vidas y tus puntos. Pulsa Enter ahora.', expect: { kind: 'command', id: 'status' },
+                    accept: evt => (evt.type === 'command' && evt.id === 'status')
+                        ? { ok: true, msg: 'Así siempre sabrás cómo vas. En la Biblioteca puedes volver a escuchar a todas las criaturas, y en la Práctica libre puedes entrenar sin perder vidas.' }
+                        : null,
+                });
+            },
         ];
-        for (const item of quiz) {
-            const res = await this.#exercise(gen, {
-                text: item.q, expect: { kind: 'element', id: item.a },
-                accept: evt => {
-                    if (evt.type !== 'element') return null;
-                    if (evt.id === item.a) { a.playElement(evt.id); return { ok: true, msg: `¡Correcto! ${ELEMENTS[item.a].name}.` }; }
-                    const victim = ELEMENTS[item.a].beats, art = id => (id === 'tierra' ? 'la' : 'el');
-                    return { ok: false, msg: `No. Recuerda: ${art(item.a)} ${ELEMENTS[item.a].name} ${ELEMENTS[item.a].verb} ${art(victim)} ${ELEMENTS[victim].name}. Inténtalo de nuevo.` };
-                },
-            });
-            if (!res) return false;
+
+        if (from > 0 && !await this.#explain(gen, [
+            `Entrenamiento, capítulo ${from + 1}: ${Tutorial.CHAPTERS[from]}. Para repetir una instrucción, pulsa Espacio. Para salir, pulsa Escape.`,
+        ])) return false;
+        for (let i = from; i < chapters.length; i++) {
+            if (!ok()) return false;
+            this.#d.onChapter?.(i);
+            if (!await chapters[i]()) return false;
         }
-
-        // 5. Hechizos simples
-        if (!await this.#explain(gen, [
-            'Ya puedes lanzar hechizos. Pulsa la tecla del elemento y, enseguida, la flecha hacia el enemigo.',
-            'Puedes mantener el elemento pulsado mientras pulsas la flecha, o soltarlo justo antes.',
-        ])) return false;
-        const guided = [
-            { id: 'wolf_fire', dir: 'left', text: `Un Lobo de Fuego a tu izquierda. El Agua apaga el Fuego: pulsa ${k.spoken.agua} y luego ${k.spoken.left}.` },
-            { id: 'frog_water', dir: 'right', text: `Una Rana de Agua a tu derecha. La Tierra la detiene: pulsa ${k.spoken.tierra} y luego ${k.spoken.right}.` },
-            { id: 'bat_wind', dir: 'up', text: `Un Murciélago de Viento arriba. El Fuego lo doma: pulsa ${k.spoken.fuego} y luego ${k.spoken.up}.` },
-            { id: 'golem_earth', dir: 'down', text: `Un Gólem de Tierra abajo. El Viento lo mueve: pulsa ${k.spoken.viento} y luego ${k.spoken.down}.` },
-        ];
-        for (const g of guided) if (!await this.#spellExercise(gen, g)) return false;
-
-        if (!await this.#explain(gen, ['Ahora sin ayuda. Escucha a la criatura y su posición, y responde.'])) return false;
-        for (const id of shuffle(BASICS).slice(0, 3)) {
-            const dir = pick(DIR_IDS);
-            if (!await this.#spellExercise(gen, { id, dir, text: `${ENEMIES[id].name}, ${DIRECTIONS[dir].name}.` })) return false;
-        }
-
-        // 6. Dúos
-        if (!await this.#explain(gen, [
-            'Las criaturas élite tienen dos elementos y dos debilidades.',
-            'Para herirlas de verdad, combina sus dos debilidades: pulsa las dos teclas de elemento a la vez y después la flecha. Es un golpe crítico: quita dos vidas.',
-        ])) return false;
-        const d1 = pick(DIR_IDS), d2 = pick(DIR_IDS);
-        if (!await this.#spellExercise(gen, {
-            id: 'magma_elem', dir: d1,
-            text: `Un Elemental de Magma, de Fuego y Tierra, ${DIRECTIONS[d1].name}. Es débil al Agua y al Viento. Lanza la Tormenta de Hielo: ${k.spoken.agua} y ${k.spoken.viento} a la vez, y luego ${k.spoken[d1]}.`,
-            requireCrit: true,
-        })) return false;
-        if (!await this.#spellExercise(gen, {
-            id: 'storm_spec', dir: d2,
-            text: `Un Espectro Tormenta, de Agua y Viento, ${DIRECTIONS[d2].name}. La Tierra vence al Agua y el Fuego vence al Viento. ¿Qué dúo usarás?`,
-            requireCrit: true,
-        })) return false;
-
-        // 7. Controles y consejos
-        if (!await this.#explain(gen, [
-            'Durante el combate tienes un tiempo limitado para responder. Cuando se esté acabando, oirás un tic-tac cada vez más rápido.',
-        ])) return false;
-        for (let i = 0; i < 8; i++) { a.tick(i / 8); await this.#wait(420 - i * 35); }
-        if (!await this.#explain(gen, [
-            'Si se agota el tiempo, el enemigo te ataca. Cada error te quita una vida.',
-            'Cada cinco aciertos seguidos sube tu multiplicador de puntos, y las rachas largas te devuelven vidas.',
-            'Espacio repite el enemigo actual. H te da una pista sobre su debilidad. Escape pausa el juego.',
-            'Y cuando ya reconozcas a las criaturas por su sonido, la tecla V apaga la voz que las anuncia. Vuelve a pulsarla para encenderla.',
-        ])) return false;
-        if (!await this.#exercise(gen, {
-            text: 'Y Enter te dice tus vidas y tus puntos. Pulsa Enter ahora.', expect: { kind: 'command', id: 'status' },
-            accept: evt => (evt.type === 'command' && evt.id === 'status')
-                ? { ok: true, msg: 'Así siempre sabrás cómo vas. En la Biblioteca puedes volver a escuchar a todas las criaturas, y en la Práctica libre puedes entrenar sin perder vidas.' }
-                : null,
-        })) return false;
         await this.#say(gen, 'Entrenamiento completado. Ya eres un invocador de la Academia. Que los ecos te guíen.');
         return ok();
     }

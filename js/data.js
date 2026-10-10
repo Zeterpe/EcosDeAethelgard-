@@ -6,7 +6,7 @@
 'use strict';
 
 /** Versión del juego. Al publicar cambios, súbela también en los ?v= de index.html. */
-const GAME_VERSION = { id: '20261008a', spoken: '8 de octubre de 2026' };
+const GAME_VERSION = { id: '20261010a', spoken: '10 de octubre de 2026' };
 
 // ═══════════════════════════════════════════════════════
 // Elementos y ciclo elemental
@@ -368,9 +368,11 @@ const ACHIEVEMENTS_DEF = [
     { id: 'branch_wind', name: 'Voz del Viento', desc: 'Purifica a Zael en la ruta de Viento.' },
     { id: 'branch_earth', name: 'Corazón de Piedra', desc: 'Purifica a Rok en la ruta de Tierra.' },
     { id: 'final_boss', name: 'Ecos Eternos', desc: 'Derrota al Avatar del Silencio.' },
+    { id: 'oyente', name: 'El Oyente sin Miedo', desc: 'Sostén el Aliento y suéltalo cuando suene la campana.' },
     { id: 'streak10', name: 'En Armonía', desc: 'Consigue una racha de 10 aciertos seguidos.' },
     { id: 'streak25', name: 'Sinfonía Elemental', desc: 'Consigue una racha de 25 aciertos seguidos.' },
     { id: 'flawless', name: 'Intocable', desc: 'Supera un nivel de la historia sin recibir daño.' },
+    { id: 'gold10', name: 'Oído de Oro', desc: 'Consigue la medalla de oro en diez niveles de la historia.' },
     { id: 'fog', name: 'Oído Absoluto', desc: 'Supera un nivel de Niebla.' },
     { id: 'crits50', name: 'Maestro de los Dúos', desc: 'Acierta 50 golpes críticos en total.' },
     { id: 'arena10', name: 'Gladiador del Eco', desc: 'Alcanza la oleada 10 en la Arena.' },
@@ -378,6 +380,9 @@ const ACHIEVEMENTS_DEF = [
     { id: 'bestiary', name: 'Erudito', desc: 'Encuentra a todas las criaturas comunes del Bestiario.' },
     { id: 'archimago', name: 'Archimago', desc: 'Purifica a un guardián en dificultad Archimago.' },
     { id: 'daily', name: 'Eco del Día', desc: 'Completa un desafío diario.' },
+    { id: 'daily3', name: 'Tres Amaneceres', desc: 'Juega el desafío diario tres días seguidos.' },
+    { id: 'daily7', name: 'Semana de Ecos', desc: 'Juega el desafío diario siete días seguidos.' },
+    { id: 'daily30', name: 'Luna Entera', desc: 'Juega el desafío diario treinta días seguidos.' },
     { id: 'friend', name: 'Compañeros de Armas', desc: 'Añade a un amigo en la Comunidad.' },
     { id: 'duel_win', name: 'Primer Duelo', desc: 'Gana un duelo contra otro invocador.' },
     { id: 'duel_master', name: 'Maestro Duelista', desc: 'Gana cinco duelos.' },
@@ -416,9 +421,22 @@ function makeRng(seedStr) {
  */
 const GameRandom = {
     _r: null,
-    seed(s) { this._r = makeRng(s); },
-    clear() { this._r = null; },
+    _seed: null,
+    seed(s) { this._seed = String(s); this._r = makeRng(s); },
+    clear() { this._r = null; this._seed = null; },
     get seeded() { return !!this._r; },
+    /**
+     * Ejecuta fn con un azar propio, derivado de la semilla y de `tag` (por ejemplo «oleada:3»).
+     * Así esa parte de la partida sale igual para todos los jugadores, hayan gastado el azar que
+     * hayan gastado antes (quien falla tiene más turnos). Sin semilla, no cambia nada.
+     * Solo cubre lo que fn hace antes de su primera espera (await).
+     */
+    scoped(tag, fn) {
+        if (this._seed === null) return fn();
+        const prev = this._r;
+        this._r = makeRng(`${this._seed}|${tag}`);
+        try { return fn(); } finally { this._r = prev; }
+    },
 };
 function rand() { return GameRandom._r ? GameRandom._r() : Math.random(); }
 function pick(arr, rnd = rand) { return arr[Math.floor(rnd() * arr.length)]; }
@@ -433,12 +451,49 @@ function fmtNum(n) { return Math.round(n).toLocaleString('es-ES'); }
 function fmtDecimal(n, digits = 1) { return n.toFixed(digits).replace('.', ','); }
 function joinY(list) {
     if (list.length <= 1) return list.join('');
-    return list.slice(0, -1).join(', ') + ' y ' + list[list.length - 1];
+    // «e» ante una palabra que empieza por el sonido i («Primera Sangre e Intocable»), salvo «hie-».
+    const last = String(list[list.length - 1]);
+    const y = /^h?i(?![aeoáéó])/i.test(last) ? 'e' : 'y';
+    return `${list.slice(0, -1).join(', ')} ${y} ${last}`;
 }
 function elementNames(ids) { return joinY(ids.map(id => ELEMENTS[id].name)); }
 function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+/** Nombre de invocador limpio: solo letras, números, espacios, guion y guion bajo; 24 caracteres como mucho. */
+function cleanName(raw) {
+    return String(raw ?? '').replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9 _-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
+}
+
+/** Día anterior o posterior a un identificador de día «AAAA-MM-DD». */
+function dayShift(day, delta) {
+    const [y, m, d] = day.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10);
+}
+
+/**
+ * Días seguidos jugando el desafío diario. `days` son los días jugados y `today` el de hoy.
+ * Si hoy aún no se ha jugado, la racha de ayer sigue viva.
+ */
+function dailyStreak(days, today) {
+    const played = new Set(days || []);
+    let day = played.has(today) ? today : dayShift(today, -1);
+    let n = 0;
+    while (played.has(day)) { n++; day = dayShift(day, -1); }
+    return n;
+}
+
+/** Medallas de los niveles de la historia: oro sin recibir golpes, plata con uno, bronce al superarlo. */
+const MEDALS = {
+    1: { name: 'bronce', icon: '🥉' },
+    2: { name: 'plata', icon: '🥈' },
+    3: { name: 'oro', icon: '🥇' },
+};
+function medalFor(result) {
+    const hits = result.stats.damage;
+    return hits === 0 ? 3 : hits === 1 ? 2 : 1;
+}
+
 function fmtDuration(secs) {
     const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60);
     const parts = [];

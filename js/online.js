@@ -18,10 +18,6 @@ const Online = (() => {
     const me = () => A.getProfile();
     const pendingCount = () => incoming.length;
 
-    function cleanName(raw) {
-        return String(raw).replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9 _-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
-    }
-
     /** Anuncia un error. Devuelve una promesa que termina cuando se ha dicho (para no pisarlo). */
     function fail(e, where = '') {
         console.warn('[Online]', where, e);
@@ -676,6 +672,8 @@ const Online = (() => {
             'Juega hasta caer. Cuenta tu mejor puntuación del día y puedes intentarlo las veces que quieras.',
             best ? `Tu mejor puntuación hoy: ${fmtNum(best)}.` : 'Todavía no lo has jugado hoy.',
         ];
+        const streak = dailyStreak(p.dailyDays, day);
+        if (streak > 1) lines.push(`Llevas ${streak} días seguidos jugando el desafío.${best ? '' : ' Juega hoy para no perder la racha.'}`);
         if (!isCloud()) lines.push(Cloud.enabled ? 'Inicia sesión para competir con tus amigos en la clasificación del día.' : '');
         const buttons = [{ label: 'Jugar el desafío de hoy', value: 'play' }];
         if (isCloud()) buttons.push({ label: 'Clasificación de hoy', value: 'board' });
@@ -696,12 +694,21 @@ const Online = (() => {
         const prevBest = p.dailyBest?.day === day ? p.dailyBest.score : 0;
         if (res.score > prevBest) p.dailyBest = { day, score: res.score };
         p.dailyDays = [...new Set([...(p.dailyDays || []), day])].slice(-90);
-        if (res.wave > 1 || res.score > 0) A.unlockAch('daily');
+        // Los logros se cuentan en el resumen: dichos aparte, el resumen cortaba el anuncio.
+        const streak = dailyStreak(p.dailyDays, day), won = [];
+        if (res.wave > 1 || res.score > 0) {
+            won.push(A.unlockAch('daily'));
+            if (streak >= 3) won.push(A.unlockAch('daily3'));
+            if (streak >= 7) won.push(A.unlockAch('daily7'));
+            if (streak >= 30) won.push(A.unlockAch('daily30'));
+        }
         A.save();
         const lines = [
             `Llegaste a la oleada ${res.wave} con ${fmtNum(res.score)} puntos.`,
             res.score > prevBest ? (prevBest ? '¡Has mejorado tu puntuación de hoy!' : '¡Es tu mejor puntuación de hoy!') : `Tu mejor de hoy sigue siendo ${fmtNum(prevBest)}.`,
+            streak > 1 ? `Racha: ${streak} días seguidos.` : 'Vuelve mañana para empezar una racha de días.',
         ];
+        if (won.some(Boolean)) lines.push(`Logros desbloqueados: ${joinY(won.filter(Boolean))}.`);
         const buttons = [];
         if (isCloud()) {
             try {

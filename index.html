@@ -7,7 +7,7 @@
     <title>Ecos de Aethelgard</title>
     <meta name="description" content="RPG de acción hecho de sonido, accesible para personas ciegas. Usa auriculares." />
     <meta name="theme-color" content="#07060a" />
-    <link rel="stylesheet" href="style.css?v=20261008a" />
+    <link rel="stylesheet" href="style.css?v=20261010a" />
 </head>
 
 <body>
@@ -94,6 +94,7 @@
             <nav aria-label="Menú principal">
                 <ul class="menu-list" id="main-menu">
                     <li><button class="menu-btn" data-nav data-action="story" id="btn-story">Historia</button></li>
+                    <li id="replay-item" hidden><button class="menu-btn" data-nav data-action="replay" id="btn-replay">Repetir niveles</button></li>
                     <li><button class="menu-btn" data-nav data-action="tutorial" id="btn-tutorial">Entrenamiento</button></li>
                     <li><button class="menu-btn" data-nav data-action="daily" id="btn-daily">Desafío diario</button></li>
                     <li><button class="menu-btn" data-nav data-action="community" id="btn-community">Comunidad y duelos</button></li>
@@ -226,24 +227,26 @@
 
     <div id="toast" class="toast" aria-hidden="true"></div>
     <div id="caption" class="caption" aria-hidden="true"></div>
+    <!-- Descripciones de los controles para el lector de pantalla (las rellena js/ui.js) -->
+    <div id="a11y-desc" hidden></div>
     <div id="sr-assertive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
     <div id="sr-polite" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-    <script src="js/config.js?v=20261008a"></script>
-    <script src="js/data.js?v=20261008a"></script>
-    <script src="js/lore.js?v=20261008a"></script>
-    <script src="js/storage.js?v=20261008a"></script>
-    <script src="js/speech.js?v=20261008a"></script>
-    <script src="js/audio.js?v=20261008a"></script>
-    <script src="js/music.js?v=20261008a"></script>
-    <script src="js/narrator.js?v=20261008a"></script>
-    <script src="js/input.js?v=20261008a"></script>
-    <script src="js/combat.js?v=20261008a"></script>
-    <script src="js/tutorial.js?v=20261008a"></script>
-    <script src="js/ui.js?v=20261008a"></script>
-    <script src="js/cloud.js?v=20261008a"></script>
-    <script src="js/online.js?v=20261008a"></script>
-    <script src="js/app.js?v=20261008a"></script>
+    <script src="js/config.js?v=20261010a"></script>
+    <script src="js/data.js?v=20261010a"></script>
+    <script src="js/lore.js?v=20261010a"></script>
+    <script src="js/storage.js?v=20261010a"></script>
+    <script src="js/speech.js?v=20261010a"></script>
+    <script src="js/audio.js?v=20261010a"></script>
+    <script src="js/music.js?v=20261010a"></script>
+    <script src="js/narrator.js?v=20261010a"></script>
+    <script src="js/input.js?v=20261010a"></script>
+    <script src="js/combat.js?v=20261010a"></script>
+    <script src="js/tutorial.js?v=20261010a"></script>
+    <script src="js/ui.js?v=20261010a"></script>
+    <script src="js/cloud.js?v=20261010a"></script>
+    <script src="js/online.js?v=20261010a"></script>
+    <script src="js/app.js?v=20261010a"></script>
 </body>
 
 </html>

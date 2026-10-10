@@ -222,12 +222,15 @@ class Narrator {
      * Plan de una sección: por cada párrafo, sus fragmentos grabados,
      * o null si ese párrafo debe leerlo la voz del sistema.
      * Devuelve null si no hay nada grabado que usar.
+     * offset: los párrafos son solo un tramo de la sección, a partir de ese índice
+     * (sin él, deben ser la sección entera).
      */
-    plan(key, paragraphs) {
+    plan(key, paragraphs, offset = null) {
         if (!key || !this.available || this.#settings.storyVoice === 'sistema' || !this.#audio.ready) return null;
         const sec = this.#manifest.secciones[key];
-        if (!sec || sec.length !== paragraphs.length) return null;
-        const plan = paragraphs.map((p, i) => (sec[i] && sec[i].h === narrationHash(p) ? sec[i].s : null));
+        const from = offset ?? 0;
+        if (!sec || (offset === null ? sec.length !== paragraphs.length : from + paragraphs.length > sec.length)) return null;
+        const plan = paragraphs.map((p, i) => (sec[from + i] && sec[from + i].h === narrationHash(p) ? sec[from + i].s : null));
         return plan.some(Boolean) ? plan : null;
     }
 

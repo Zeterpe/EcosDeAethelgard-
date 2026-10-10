@@ -47,6 +47,18 @@ function todayId(d = new Date()) {
 
 function normName(name) { return String(name).trim().toLowerCase(); }
 
+/**
+ * Lo que escriben otros jugadores se limpia al leerlo: sus nombres se muestran y se dicen en voz
+ * alta, así que nunca deben traer más que un nombre de invocador.
+ */
+function safeName(raw) { return cleanName(raw) || 'Un invocador'; }
+function challengeFrom(d) {
+    const c = { id: d.id, ...d.data() };
+    c.fromName = safeName(c.fromName);
+    c.toName = safeName(c.toName);
+    return c;
+}
+
 const CLOUD_ERRORS = {
     'auth/email-already-in-use': 'Ese correo ya tiene una cuenta. Inicia sesión con él.',
     'auth/invalid-email': 'El correo no es válido.',
@@ -270,7 +282,7 @@ class CloudService {
             onPlayer?.(this.player);
         }, warn));
         this.#unsubs.push(this.#col('challenges').where('toUid', '==', uid).where('status', '==', 'pending')
-            .onSnapshot(q => onIncoming?.(q.docs.map(d => ({ id: d.id, ...d.data() }))), warn));
+            .onSnapshot(q => onIncoming?.(q.docs.map(challengeFrom)), warn));
     }
 
     stopWatching() { this.#unsubs.splice(0).forEach(u => { try { u(); } catch (_) { /* nada */ } }); }
@@ -280,14 +292,14 @@ class CloudService {
     async listPlayers({ force = false } = {}) {
         if (!force && this.#playersCache && Date.now() - this.#playersAt < 60000) return this.#playersCache;
         const q = await this.#col('players').get();
-        this.#playersCache = q.docs.map(d => d.data());
+        this.#playersCache = q.docs.map(d => { const p = d.data(); return { ...p, name: safeName(p.name) }; });
         this.#playersAt = Date.now();
         return this.#playersCache;
     }
 
     async getPlayer(uid) {
         const s = await this.#doc(`players/${uid}`).get();
-        return s.exists ? s.data() : null;
+        return s.exists ? { ...s.data(), name: safeName(s.data().name) } : null;
     }
 
     async listCustomAchievements({ force = false } = {}) {
@@ -320,7 +332,7 @@ class CloudService {
             this.#col('challenges').where('fromUid', '==', this.uid).get(),
             this.#col('challenges').where('toUid', '==', this.uid).get(),
         ]);
-        const all = [...a.docs, ...b.docs].map(d => ({ id: d.id, ...d.data() }));
+        const all = [...a.docs, ...b.docs].map(challengeFrom);
         return all.sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0));
     }
 
@@ -349,7 +361,7 @@ class CloudService {
 
     async listDaily(day) {
         const q = await this.#col(`daily/${day}/scores`).get();
-        return q.docs.map(d => d.data()).sort((a, b) => b.score - a.score);
+        return q.docs.map(d => { const s = d.data(); return { ...s, name: safeName(s.name) }; }).sort((a, b) => b.score - a.score);
     }
 
     // ── Privacidad: exportar y borrar ──────────────────
@@ -489,7 +501,7 @@ class CloudService {
 
     async adminListChallenges() {
         const q = await this.#col('challenges').orderBy('createdAt', 'desc').limit(60).get();
-        return q.docs.map(d => ({ id: d.id, ...d.data() }));
+        return q.docs.map(challengeFrom);
     }
 }
 

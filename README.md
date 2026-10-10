@@ -19,6 +19,10 @@ Las criaturas del Silencio te atacan desde cuatro posiciones. Escucha su sonido,
 
 Pulsa el elemento y, enseguida, la flecha. El elemento queda «cargado» durante la ventana de combinación, así que puedes mantenerlo o soltarlo justo antes. Hay un esquema para zurdos (J K L Ñ + W A S D) y botones táctiles en pantalla.
 
+Durante una narración, **Enter** pasa al párrafo siguiente y **Escape** la salta entera (el juego lo dice en voz alta la primera vez).
+
+**En pantalla táctil** también hay gestos sobre el campo de batalla: toca con uno, dos, tres o cuatro dedos para Agua, Fuego, Tierra o Viento, y desliza un dedo hacia el enemigo para lanzar. Deslizar dos dedos repite el enemigo y deslizar tres pausa. Con VoiceOver o TalkBack activados, el lector se queda con los gestos: hay que desactivarlo mientras se combate (pendiente de probar en un iPhone real).
+
 **Ciclo elemental:** el Agua apaga el Fuego, el Fuego doma el Viento, el Viento mueve la Tierra y la Tierra detiene el Agua. Nunca ataques a una criatura con su propio elemento: la curarías.
 
 **Posición por sonido:** izquierda y derecha suenan en cada oído (con un chasquido de madera); arriba suena agudo y brillante (con una campanilla); abajo, grave y apagado (con un golpe sordo).
@@ -30,7 +34,7 @@ Con una cuenta gratuita la partida se guarda en la nube y se compite con los ami
 - **Clasificación online**: Arena, Historia, Logros, Duelos y Desafío de hoy, marcando a tus amigos con ★.
 - **Comunidad**: lista de invocadores, amigos, la ficha de cada uno con sus logros, récords y estadísticas.
 - **Duelos**: desafías a alguien, juegas 5 oleadas y después tu rival juega exactamente las mismas; gana quien saque más puntos. Avisos en directo, revancha e historial de victorias y derrotas.
-- **Desafío diario**: las mismas oleadas para todos durante el día (a veces con Niebla o Frenesí) y su propia clasificación.
+- **Desafío diario**: las mismas oleadas para todos durante el día (a veces con Niebla o Frenesí), su propia clasificación y racha de días seguidos. En duelos y desafío diario, cada oleada y cada turno salen iguales para todos, falle quien falle.
 - **Panel del creador**: solo para ti. Quitar o dar logros, crear logros especiales, reiniciar récords, cambiar niveles, suspender o borrar cuentas, publicar avisos y moderar duelos y puntuaciones.
 - **Privacidad**: política de privacidad con consentimiento, descarga de todos tus datos y borrado inmediato de la cuenta. El correo nunca se muestra a nadie.
 
@@ -45,7 +49,9 @@ Para generarlos: **[CONFIGURAR_VOCES.md](CONFIGURAR_VOCES.md)** (crear el recurs
 ## Modos
 
 - **Historia**: 30 niveles en tres actos, con ecos narrados, las **Crónicas de los Antiguos Ecos** (una página cada cinco niveles que va desvelando cómo se quebró el Gran Eco), la historia de cada criatura nueva y de por qué se corrompió, niveles especiales (Frenesí, Niebla, Élite) y la Sombra Imitadora en los niveles 15 y 25. Después, cuatro rutas con su guardián y el combate final contra el Avatar del Silencio. Si caes, repites el nivel: nunca pierdes el progreso.
-- **Entrenamiento**: tutorial interactivo (auriculares, direcciones, elementos, ciclo, hechizos, dúos y controles).
+- **Repetir niveles**: vuelve a jugar cualquier nivel superado para mejorar su medalla (oro sin recibir golpes, plata con uno, bronce al superarlo).
+- **La Concordia**: al final de la historia sostienes el Aliento y lo sueltas cuando suena la campana de Ignar. Después se puede repetir desde la Biblioteca.
+- **Entrenamiento**: tutorial interactivo por capítulos (auriculares, direcciones, elementos, ciclo, hechizos, dúos y controles); si sales, la próxima vez sigues por donde lo dejaste.
 - **Arena de los Ecos**: oleadas infinitas, un guardián cada cinco oleadas, récord y clasificación.
 - **Práctica libre**: sin vidas ni puntos; cada error se explica.
 - **Biblioteca**: bestiario con el sonido de cada criatura (en las cuatro posiciones), grimorio de hechizos, sonidos de posición y archivo de la historia.

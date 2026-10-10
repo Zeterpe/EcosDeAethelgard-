@@ -32,6 +32,9 @@ const App = (() => {
     const tutorial = new Tutorial({
         audio, speech, input, settings, ui: CombatView,
         confirmExit: () => confirmTutorialExit(),
+        onChapter: i => {
+            if (profile && !profile.tutorialDone && i > (profile.tutorialStep || 0)) { profile.tutorialStep = i; save(); }
+        },
     });
 
     input.onChange = list => CombatView.armed(list);
@@ -65,6 +68,7 @@ const App = (() => {
         unlock();
         if (Dialog.active) { Dialog.onKey(e); return; }
         if (Narration.active) { Narration.onKey(e); return; }
+        if (Ritual.active) { Ritual.key(e, true); return; }
         const scr = UI.current;
         if (scr === 'combat') {
             // Entre narraciones no se hace nada: un Escape de más no debe abortar el nivel.
@@ -130,7 +134,7 @@ const App = (() => {
 
     function goLogin(first = false, introOverride = null) {
         flow++;
-        combat.stop(); tutorial.stop();
+        combat.stop(); tutorial.stop(); Ritual.abort();
         $('btn-go-online').hidden = !Cloud.enabled;
         renderSavedProfiles();
         const inp = $('input-username');
@@ -165,7 +169,7 @@ const App = (() => {
     }
 
     function login(raw) {
-        const name = String(raw).replace(/[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9 _-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
+        const name = cleanName(raw);
         if (name.length < 2) {
             $('login-error').textContent = 'El nombre necesita al menos 2 letras o números.';
             audio.uiError();
@@ -192,6 +196,7 @@ const App = (() => {
         flow++;
         combat.stop();
         tutorial.stop();
+        Ritual.abort();
         GameRandom.clear();
         if (Dialog.active) Dialog.close(undefined);
         audio.setHeartbeat(false);
@@ -223,9 +228,13 @@ const App = (() => {
     function refreshMenu() {
         $('menu-welcome').textContent = `Invocador: ${profile.username}`;
         $('btn-story').dataset.desc = storyDesc();
+        const step = profile.tutorialStep || 0;
         $('btn-tutorial').dataset.desc = profile.tutorialDone
-            ? 'Repasa cómo jugar: direcciones, elementos y hechizos.'
-            : 'Recomendado para empezar. Aprende a jugar paso a paso.';
+            ? 'Repasa cómo jugar, entero o por capítulos: direcciones, elementos, hechizos y dúos.'
+            : step > 0 ? `Sigue por donde lo dejaste: capítulo ${step + 1}, ${Tutorial.CHAPTERS[step]}.`
+                : 'Recomendado para empezar. Aprende a jugar paso a paso.';
+        $('replay-item').hidden = profile.story.level < 2;
+        $('btn-replay').dataset.desc = `Vuelve a jugar los niveles que ya has superado y mejora tus medallas. ${medalSummary()}`;
         $('btn-arena').dataset.desc = 'Oleadas infinitas, cada vez más rápidas. ' +
             (profile.arena.bestScore > 0 ? `Tu récord: ${fmtNum(profile.arena.bestScore)} puntos, oleada ${profile.arena.bestWave}.` : 'Consigue el mejor récord.');
         $('btn-practice').dataset.desc = 'Combate sin perder vidas, con explicación de cada error.';
@@ -235,8 +244,10 @@ const App = (() => {
         $('btn-options').dataset.desc = `Dificultad: ${DIFFICULTIES[settings.difficulty].name}. Voz, volumen, controles y accesibilidad.`;
         $('btn-help').dataset.desc = 'Reglas, teclas y consejos.';
         const online = mode === 'cloud' && Cloud.signedIn;
+        const streak = dailyStreak(profile.dailyDays, todayId());
         $('btn-daily').dataset.desc = 'Las mismas oleadas para todos durante el día. ' +
-            (profile.dailyBest?.day === todayId() ? `Tu mejor puntuación hoy: ${fmtNum(profile.dailyBest.score)}.` : 'Aún no lo has jugado hoy.');
+            (profile.dailyBest?.day === todayId() ? `Tu mejor puntuación hoy: ${fmtNum(profile.dailyBest.score)}.` : 'Aún no lo has jugado hoy.') +
+            (streak > 1 ? ` Llevas ${streak} días seguidos.` : '');
         $('btn-community').closest('li').hidden = !Cloud.enabled;
         const pend = online ? Online.pending : 0;
         $('btn-community').textContent = pend ? `Comunidad y duelos (${pend})` : 'Comunidad y duelos';
@@ -263,7 +274,8 @@ const App = (() => {
     function initMenu() {
         const actions = {
             story: () => startStory(),
-            tutorial: () => startTutorial(),
+            replay: () => openReplay(),
+            tutorial: () => openTutorial(),
             arena: () => startArena(),
             practice: () => openPracticeMenu(),
             library: () => openLibrary(),
@@ -277,9 +289,10 @@ const App = (() => {
             admin: () => Online.openAdmin(),
             logout: () => {
                 if (Online.isCloud()) { Online.logout(); return; }
-                speech.say('Hasta pronto, ' + profile.username + '.');
+                // La despedida va en la entrada de la pantalla siguiente: dicha aparte, esa entrada la cortaba.
+                const bye = `Hasta pronto, ${profile.username}. Elige o escribe un nombre de invocador.`;
                 profile = null;
-                goLogin();
+                goLogin(false, bye);
             },
         };
         document.querySelectorAll('#main-menu [data-action]').forEach(b => {
@@ -296,16 +309,38 @@ const App = (() => {
     // Logros y eventos de combate
     // ═══════════════════════════════════════════════════
 
+    /** Desbloquea un logro. Devuelve su nombre si es nuevo, o null si ya lo tenía. */
     function unlockAch(id) {
-        if (!profile || profile.achievements.includes(id)) return;
+        if (!profile || profile.achievements.includes(id)) return null;
         const a = ACHIEVEMENTS_DEF.find(x => x.id === id);
-        if (!a) return;
+        if (!a) return null;
         profile.achievements.push(id);
         save();
         audio.achievement();
         UI.toast(`🏆 Logro: ${a.name}`);
-        if (combat.active) pendingAch.push(a.name);
-        else speech.say(`Logro desbloqueado: ${a.name}.`, { interrupt: false });
+        // Siempre se apuntan para el resumen del combate: los que se consiguen justo al terminar
+        // (un nivel sin daño, un acto superado…) se anunciaban, pero el resumen cortaba el anuncio.
+        pendingAch.push(a.name);
+        if (!combat.active) speech.say(`Logro desbloqueado: ${a.name}.`, { interrupt: false });
+        return a.name;
+    }
+
+    function medalSummary() {
+        const m = Object.values(profile.story.medals || {});
+        const gold = m.filter(x => x === 3).length;
+        return m.length ? `Tienes ${plural(m.length, 'medalla', 'medallas')}, ${gold} de oro.` : 'Aún no tienes medallas.';
+    }
+
+    /** Guarda la medalla y la mejor puntuación de un nivel superado. Devuelve la frase que lo cuenta. */
+    function recordLevel(n, result) {
+        const st = profile.story, medal = medalFor(result), prev = st.medals[n] || 0;
+        if (medal > prev) st.medals[n] = medal;
+        if (result.score > (st.bestScores[n] || 0)) st.bestScores[n] = result.score;
+        if (Object.values(st.medals).filter(m => m === 3).length >= 10) unlockAch('gold10');
+        let t = `Medalla de ${MEDALS[medal].name}.`;
+        if (prev && medal > prev) t += ` Mejoras la de ${MEDALS[prev].name} que tenías.`;
+        else if (prev > medal) t += ` Conservas la de ${MEDALS[prev].name} que ya tenías.`;
+        return t;
     }
 
     function onCombatEvent(type, data) {
@@ -442,7 +477,8 @@ const App = (() => {
         const k = input.scheme.spoken;
         return `Elementos: ${k.agua}, Agua. ${k.fuego}, Fuego. ${k.tierra}, Tierra. ${k.viento}, Viento. ` +
             `Pulsa el elemento y luego la flecha hacia el enemigo. Para un dúo, dos elementos a la vez y la flecha. ` +
-            `Espacio repite el enemigo. Enter dice tu estado. H da una pista. V activa o desactiva los anuncios de enemigos. Escape pausa.`;
+            `Espacio repite el enemigo. Enter dice tu estado. H da una pista. V activa o desactiva los anuncios de enemigos. Escape pausa. ` +
+            `Durante una narración, Enter pasa al párrafo siguiente y Escape la salta entera.`;
     }
 
     async function afterDefeat(retry, title) {
@@ -601,7 +637,8 @@ const App = (() => {
         };
     }
 
-    async function playCampaignLevel(n) {
+    /** replay: se repite un nivel ya superado (no avanza la historia ni suma a su puntuación; solo medallas). */
+    async function playCampaignLevel(n, { replay = false } = {}) {
         const alive = newFlow();
         const def = CAMPAIGN[n], act = actFor(n);
         const mod = def.modifier ? MODIFIERS[def.modifier] : null;
@@ -634,22 +671,36 @@ const App = (() => {
 
         const result = await runEncounter(campaignEncounter(n));
         if (!alive()) return;
-        applyResult(result, 'story');
-        if (result.outcome === 'quit') { goMenu(); return; }
-        if (result.outcome === 'defeat') { afterDefeat(() => playCampaignLevel(n), `Nivel ${n}`); return; }
+        applyResult(result, replay ? 'replay' : 'story');
+        if (result.outcome === 'quit') { if (replay) openReplay(n - 1); else goMenu(); return; }
+        if (result.outcome === 'defeat') { afterDefeat(() => playCampaignLevel(n, { replay }), `Nivel ${n}`); return; }
 
-        profile.story.level = Math.max(profile.story.level, n + 1);
+        const medalText = recordLevel(n, result);
         profile.story.defeatsInRow = 0;
+        if (result.stats.damage === 0) unlockAch('flawless');
+        if (def.modifier === 'fog') unlockAch('fog');
+        if (replay) {
+            save();
+            const again = await Dialog.open({
+                title: `Nivel ${n} superado`, text: `${resultLines(result)}\n${medalText}`,
+                buttons: [{ label: 'Repetirlo otra vez', value: 'again' }, { label: 'Elegir otro nivel', value: 'list' }, { label: 'Volver al menú', value: 'menu' }],
+                cancel: 'list',
+            });
+            if (!alive()) return;
+            if (again === 'again') playCampaignLevel(n, { replay: true });
+            else if (again === 'list') openReplay(n - 1);
+            else goMenu('Menú principal.', 'btn-replay');
+            return;
+        }
+        profile.story.level = Math.max(profile.story.level, n + 1);
         profile.stats.levelsCleared++;
         if (n >= 10) unlockAch('act1');
         if (n >= 20) unlockAch('act2');
-        if (result.stats.damage === 0) unlockAch('flawless');
-        if (def.modifier === 'fog') unlockAch('fog');
         save();
 
         if (n === COMMON_LEVELS) {
             unlockAch('threshold');
-            await Dialog.open({ title: `Nivel ${n} superado`, text: resultLines(result), buttons: [{ label: 'Continuar', value: 'ok' }], cancel: 'ok' });
+            await Dialog.open({ title: `Nivel ${n} superado`, text: `${resultLines(result)}\n${medalText}`, buttons: [{ label: 'Continuar', value: 'ok' }], cancel: 'ok' });
             if (!alive()) return;
             if (!profile.echosSeen.includes('30')) { profile.echosSeen.push('30'); save(); }
             await Narration.run(LORE.echos[30], { title: LORE_EXTRA.echoTitles['30'], gap: 600, key: 'echo_30' });
@@ -661,7 +712,7 @@ const App = (() => {
         const newPage = chron && !profile.loreSeen.includes(`chron_${chron}`);
         const c = await Dialog.open({
             title: `Nivel ${n} superado`,
-            text: resultLines(result) + (newPage ? '\nHas encontrado una página de las Crónicas de los Antiguos Ecos.' : ''),
+            text: `${resultLines(result)}\n${medalText}` + (newPage ? '\nHas encontrado una página de las Crónicas de los Antiguos Ecos.' : ''),
             buttons: [{ label: `Continuar al nivel ${n + 1}`, value: 'next' }, { label: 'Volver al menú', value: 'menu' }],
             cancel: 'menu',
         });
@@ -671,6 +722,36 @@ const App = (() => {
             if (!alive()) return;
         }
         if (c === 'next') playCampaignLevel(n + 1); else goMenu();
+    }
+
+    // ═══════════════════════════════════════════════════
+    // Repetir niveles superados (medallas)
+    // ═══════════════════════════════════════════════════
+
+    function openReplay(focusIndex = 0) {
+        flow++;
+        combat.stop();
+        music.play('menu', { intensity: 1 });
+        const st = profile.story, cleared = Math.min(st.level - 1, COMMON_LEVELS);
+        const items = [];
+        for (let n = 1; n <= cleared; n++) {
+            const def = CAMPAIGN[n], mod = def.modifier ? MODIFIERS[def.modifier] : null;
+            const extra = def.miniboss ? 'Sombra Imitadora' : mod ? mod.name : '';
+            const medal = st.medals[n], best = st.bestScores[n];
+            const state = medal ? `Medalla de ${MEDALS[medal].name}${best ? `, ${fmtNum(best)} puntos` : ''}` : 'Sin medalla todavía';
+            items.push({
+                label: `Nivel ${n}${extra ? ' · ' + extra : ''}`, sub: state, icon: medal ? MEDALS[medal].icon : '▫️',
+                speak: `Nivel ${n}${extra ? ', ' + extra : ''}. ${state}.`,
+                action: () => playCampaignLevel(n, { replay: true }),
+            });
+        }
+        ListScreen.open({
+            title: 'Repetir niveles',
+            intro: `Repetir niveles. ${medalSummary()} Oro: sin recibir ningún golpe. Plata: un solo golpe. Bronce: nivel superado.`,
+            items, focusIndex: clamp(focusIndex, 0, Math.max(0, items.length - 1)),
+            emptyText: 'Supera el primer nivel de la historia para poder repetirlo.',
+            onBack: () => goMenu('Menú principal.', 'btn-replay'),
+        });
     }
 
     // ═══════════════════════════════════════════════════
@@ -896,8 +977,7 @@ const App = (() => {
         if (settings.difficulty === 'archimago') unlockAch('archimago');
         save();
         if (!profile.loreSeen.includes('chron_epilogue')) {
-            await playChronicle('epilogue');
-            if (!alive()) return;
+            if (!await playConcordia(alive)) return;
         }
         await Narration.run(LORE_EXTRA.credits, { title: 'Fin', key: 'credits' });
         if (!alive()) return;
@@ -910,18 +990,150 @@ const App = (() => {
     }
 
     // ═══════════════════════════════════════════════════
+    // La Concordia: sostener el Aliento y soltarlo cuando suena la campana
+    // ═══════════════════════════════════════════════════
+
+    const Ritual = {
+        active: false,
+        _state: 'idle',           // waiting · holding · done
+        _resolve: null, _release: null, _bellT: null, _lateT: null, _rang: false, _fails: 0,
+
+        /** Devuelve una promesa: true si se sostiene y se suelta a tiempo, false si se pasa de largo con Escape. */
+        run() {
+            return new Promise(resolve => {
+                this._resolve = resolve;
+                this.active = true;
+                this._fails = 0;
+                this._state = 'waiting';
+                music.setPaused(true);
+                CombatView.setMode('tutorial', 'La Concordia', 'Sostén el Aliento y suéltalo cuando suene la campana');
+                CombatView.tutorialText('Mantén pulsado Espacio (o un dedo sobre este recuadro) y suéltalo cuando suene la campana. Enter: sostener y soltar sin mantener. Escape: seguir sin hacerlo.');
+                UI.focus($('combat-stage'), { silent: true });
+                speech.say('Te toca sostener el Aliento. Mantén pulsado Espacio, o mantén un dedo sobre la pantalla, y suéltalo cuando suene la campana. ' +
+                    'Si no puedes mantenerlo, pulsa Enter una vez para sostener y otra para soltar. Con Escape sigues la historia sin hacerlo.');
+            });
+        },
+
+        key(e, down) {
+            if (e.key === 'Tab') return;
+            e.preventDefault();
+            if (!down) { if (e.key === ' ' || e.code === 'Space') this.release(); return; }
+            if (e.repeat) return;
+            if (e.key === 'Escape') { audio.uiBack(); this._finish(false); }
+            else if (e.key === ' ' || e.code === 'Space') this.hold();
+            else if (e.key === 'Enter') { if (this._state === 'holding') this.release(); else this.hold(); }
+        },
+
+        hold() {
+            if (this._state !== 'waiting') return;
+            this._state = 'holding';
+            this._rang = false;
+            speech.cancel();
+            this._release = audio.breath();
+            this._bellT = setTimeout(() => {
+                this._rang = true;
+                audio.greatBell();
+                this._lateT = setTimeout(() => this._fail('Has sostenido el Aliento demasiado tiempo: así empezó el Silencio. Suéltalo, respira y vuelve a intentarlo.'), 3500);
+            }, 3200 + rand() * 2600);
+        },
+
+        release() {
+            if (this._state !== 'holding') return;
+            if (!this._rang) { this._fail('Has soltado antes de que sonara la campana. La pausa sigue ahí. Vuelve a sostener el Aliento.'); return; }
+            this._clear();
+            this._state = 'done';
+            audio.heal();
+            setTimeout(() => this._finish(true), 900);
+        },
+
+        _clear() {
+            clearTimeout(this._bellT); clearTimeout(this._lateT);
+            this._release?.();
+            this._release = null;
+        },
+
+        _fail(text) {
+            this._clear();
+            this._state = 'waiting';
+            audio.noElement();
+            if (++this._fails >= 3) text += ' Si prefieres seguir con la historia, pulsa Escape.';
+            speech.say(text);
+        },
+
+        _finish(ok) {
+            if (!this.active) return;
+            this._clear();
+            this.active = false;
+            this._state = 'idle';
+            music.setPaused(false);
+            CombatView.tutorialText('');
+            const r = this._resolve;
+            this._resolve = null;
+            r?.(ok);
+        },
+
+        /** Al salir de la pantalla por cualquier otro motivo. */
+        abort() { this._finish(false); },
+    };
+
+    /** Epílogo jugable: tras las dos primeras páginas, el jugador sostiene el Aliento; después sigue el relato. */
+    async function playConcordia(alive) {
+        const ep = LORE.chronicles.epilogue, title = chronicleTitle('epilogue');
+        markLore('chron_epilogue');
+        await Narration.run(ep.slice(0, 2), { title, gap: 700, key: 'chron_epilogue', offset: 0 });
+        if (!alive()) return false;
+        const done = await Ritual.run();
+        if (!alive()) return false;
+        if (done) unlockAch('oyente');
+        await Narration.run(ep.slice(2), { title, gap: 700, key: 'chron_epilogue', offset: 2 });
+        return alive();
+    }
+
+    /** Desde la Biblioteca, con la historia terminada: volver a sostener el Aliento. */
+    async function replayConcordia() {
+        const alive = newFlow();
+        showCombat('La Concordia', 'Sostén el Aliento y suéltalo cuando suene la campana', 'tutorial');
+        music.play('menu', { intensity: 1 });
+        const done = await Ritual.run();
+        if (!alive()) return;
+        const got = done ? unlockAch('oyente') : null;
+        openLibrary(5, !done ? '' : got ? `La campana ha sonado. Logro desbloqueado: ${got}.` : 'La campana ha sonado, y has soltado el Aliento a tiempo.');
+    }
+
+    // ═══════════════════════════════════════════════════
     // Entrenamiento
     // ═══════════════════════════════════════════════════
 
-    async function startTutorial() {
+    /** Si ya se empezó o se terminó, deja elegir capítulo; la primera vez empieza directamente. */
+    function openTutorial() {
+        const step = profile.tutorialStep || 0, names = Tutorial.CHAPTERS;
+        if (!profile.tutorialDone && step === 0) { startTutorial(0); return; }
+        flow++;
+        const items = [];
+        if (!profile.tutorialDone) {
+            items.push({ label: `Continuar: ${names[step]}`, sub: `Capítulo ${step + 1} de ${names.length}, donde lo dejaste`, icon: '▶️', action: () => startTutorial(step) });
+        }
+        items.push({ label: 'Entrenamiento completo', sub: 'Desde el principio', icon: '🎓', action: () => startTutorial(0) });
+        names.forEach((name, i) => {
+            if (i > 0) items.push({ label: `Capítulo ${i + 1}: ${name}`, sub: 'Desde aquí hasta el final', icon: '📘', action: () => startTutorial(i) });
+        });
+        ListScreen.open({
+            title: 'Entrenamiento',
+            intro: 'Entrenamiento. Elige por dónde empezar: desde el capítulo que elijas, sigue hasta el final.',
+            items, onBack: () => goMenu('Menú principal.', 'btn-tutorial'),
+        });
+    }
+
+    async function startTutorial(from = 0) {
         const alive = newFlow();
         showCombat('Entrenamiento', 'Aprende a escuchar y a lanzar hechizos', 'tutorial');
         music.play('academy', { intensity: 1 });
         audio.setReverb('hall');
-        const res = await tutorial.start();
+        const res = await tutorial.start(from);
         if (!alive()) return;
         if (res === 'done') {
             profile.tutorialDone = true;
+            profile.tutorialStep = 0;
             save();
             unlockAch('tutorial');
             const c = await Dialog.open({
@@ -1006,7 +1218,8 @@ const App = (() => {
     // Práctica libre
     // ═══════════════════════════════════════════════════
 
-    function openPracticeMenu(focusIndex = 0) {
+    /** said: resultado de la práctica que acaba de terminar (se dice al entrar, para que nada lo corte). */
+    function openPracticeMenu(focusIndex = 0, said = '') {
         flow++;
         combat.stop();
         music.play('menu', { intensity: 1 });
@@ -1022,7 +1235,8 @@ const App = (() => {
         });
         ListScreen.open({
             title: 'Práctica libre',
-            intro: 'Práctica libre. Sin vidas ni puntos: cada error se explica. Elige contra qué practicar. Los guardianes aparecerán aquí cuando los conozcas.',
+            intro: said ? `${said} Elige contra qué practicar.`
+                : 'Práctica libre. Sin vidas ni puntos: cada error se explica. Elige contra qué practicar. Los guardianes aparecerán aquí cuando los conozcas.',
             items, focusIndex,
             onBack: () => goMenu('Menú principal.', 'btn-practice'),
         });
@@ -1052,8 +1266,7 @@ const App = (() => {
         if (!alive()) return;
         applyResult(result, 'practice');
         const s = result.stats;
-        speech.say(`Práctica terminada. Aciertos: ${s.hits}. Errores: ${s.mistakes}.`);
-        openPracticeMenu(backIndex);
+        openPracticeMenu(backIndex, `Práctica terminada. Aciertos: ${s.hits}. Errores: ${s.mistakes}.`);
     }
 
     // ═══════════════════════════════════════════════════
@@ -1065,17 +1278,19 @@ const App = (() => {
         return t === 'basic' || t === 'elite' || profile.met.includes(id);
     }
 
-    function openLibrary(focusIndex = 0) {
+    /** said: lo que acaba de pasar (se dice al entrar, para que nada lo corte). */
+    function openLibrary(focusIndex = 0, said = '') {
         flow++;
         const known = BESTIARY_ORDER.filter(id => profile.met.includes(id)).length;
         ListScreen.open({
-            title: 'Biblioteca', intro: 'Biblioteca de la Academia.', focusIndex,
+            title: 'Biblioteca', intro: said ? `${said} Biblioteca.` : 'Biblioteca de la Academia.', focusIndex,
             items: [
                 { label: 'Bestiario', sub: `${known} de ${BESTIARY_ORDER.length} criaturas encontradas`, icon: '📖', action: () => openBestiary() },
                 { label: 'Grimorio de hechizos', sub: 'Los cuatro elementos y los seis dúos', icon: '✨', action: () => openGrimoire() },
                 { label: 'El ciclo elemental', sub: 'Quién vence a quién', icon: '🔄', action: () => Narration.run(LORE_EXTRA.cycle, { title: 'El ciclo elemental', key: 'cycle' }) },
                 { label: 'Sonidos de posición', sub: 'Escucha cómo suena cada dirección', icon: '🎧', action: () => openDirections() },
                 { label: 'Archivo de ecos', sub: 'Vuelve a escuchar la historia', icon: '📜', action: () => openArchive() },
+                ...(profile.story.finalDone ? [{ label: 'La Concordia', sub: 'Vuelve a sostener el Aliento hasta que suene la campana', icon: '🔔', action: () => replayConcordia() }] : []),
             ],
             onBack: () => goMenu('Menú principal.', 'btn-library'),
         });
@@ -1343,7 +1558,9 @@ const App = (() => {
             { t: 'Teclas', x: controlsText() },
             { t: 'El ciclo elemental', x: LORE_EXTRA.cycle.join(' ') },
             { t: 'Sonidos de posición', x: 'Izquierda y derecha suenan en cada oído, con un chasquido de madera. Arriba suena agudo y brillante, con una campanilla. Abajo suena grave y apagado, con un golpe sordo. En la Biblioteca puedes escuchar cada posición.' },
-            { t: 'Vidas, rachas y puntos', x: 'Cada error te quita una vida: dirección equivocada, elemento ineficaz, curar al enemigo o dejar que se agote el tiempo. Cada cinco aciertos seguidos sube tu multiplicador de puntos, hasta por cuatro, y las rachas largas te devuelven vidas. Responder rápido da puntos extra. Si caes, repites el nivel: nunca pierdes tu progreso.' },
+            { t: 'Vidas, rachas y puntos', x: 'Cada error te quita una vida: dirección equivocada, elemento ineficaz, curar al enemigo o dejar que se agote el tiempo. Cada cinco aciertos seguidos sube tu multiplicador de puntos, hasta por cuatro, y las rachas largas te devuelven vidas. Responder rápido da puntos extra: lo sabrás por un destello agudo después del golpe. Si caes, repites el nivel: nunca pierdes tu progreso.' },
+            { t: 'Medallas', x: 'Cada nivel de la historia que superas te da una medalla: oro si no recibes ningún golpe, plata si recibes uno solo y bronce si lo superas. En Repetir niveles, en el menú principal, puedes volver a jugar cualquier nivel superado para mejorar tu medalla.' },
+            { t: 'Pantalla táctil', x: 'En móviles y tabletas puedes usar los botones de la pantalla o gestos sobre el campo de batalla. Toca con un dedo para el Agua, con dos para el Fuego, con tres para la Tierra y con cuatro para el Viento; después desliza un dedo hacia el enemigo para lanzar el hechizo. Para un dúo, haz los dos toques seguidos y luego desliza. Deslizar dos dedos repite el enemigo, y deslizar tres dedos pausa. Si usas VoiceOver o TalkBack, el lector se queda con los gestos: desactívalo mientras combates, que el juego tiene su propia voz.' },
             { t: 'Niveles especiales', x: 'Frenesí: los enemigos llegan más rápido. Niebla: no se anuncia la posición, solo la oyes. Élite: solo criaturas de dos elementos. En los niveles 15 y 25 acecha la Sombra Imitadora: imita a otras criaturas y debes responderle como a la criatura que imita.' },
             { t: 'Guardianes', x: 'Cada guardián tiene una mecánica propia. Ignar lanza brasas: apágalas con Agua. El Leviatán se desplaza antes de atacar: apunta a donde termina. Zael lanza ecos falsos y lejanos: apunta al grito cercano. Rok alza un escudo de piedra: cuando lo oigas, no ataques. El Avatar del Silencio cambia de elemento sin parar.' },
             { t: 'Modos de juego', x: 'Historia: treinta niveles, cuatro rutas con sus guardianes y un enemigo final. Arena: oleadas infinitas con récord. Práctica libre: sin vidas ni puntos. Entrenamiento: aprende paso a paso.' },
@@ -1402,6 +1619,8 @@ const App = (() => {
             { id: 'ticks', label: 'Tic-tac del tiempo', type: 'bool', desc: 'Avisa con un tic-tac cuando se acaba el tiempo para responder.' },
             { id: 'mono', label: 'Audio mono', type: 'bool', desc: 'Para quien oye por un solo oído: mezcla el sonido en mono y la voz anuncia siempre la posición.' },
             { id: 'visualAids', label: 'Radar visual', type: 'bool', desc: 'Muestra en pantalla la posición del enemigo. Desactívalo para jugar de verdad a ciegas.' },
+            { id: 'gestures', label: 'Gestos táctiles', type: 'bool', desc: 'En pantallas táctiles, sobre el campo de batalla: toca con uno, dos, tres o cuatro dedos para Agua, Fuego, Tierra o Viento, y desliza un dedo hacia el enemigo para lanzar. Deslizar dos dedos repite el enemigo y deslizar tres pausa. Con VoiceOver o TalkBack activados, el lector se queda con los gestos: desactívalo mientras combates.' },
+            { id: 'vibration', label: 'Vibración', type: 'bool', desc: 'El móvil vibra al acertar y al recibir daño, si lo admite.' },
             {
                 id: 'output', label: 'Salida de voz', type: 'choice', values: ['tts', 'sr'], labels: { tts: 'Voz del juego', sr: 'Lector de pantalla' },
                 desc: v => v === 'tts' ? 'El juego habla con su propia voz.' : 'Los anuncios se envían a tu lector de pantalla.',
@@ -1428,6 +1647,7 @@ const App = (() => {
         audio.applySettings();
         if (def.id === 'keyScheme') CombatView.updateKeyLabels(input.scheme);
         document.body.classList.toggle('no-visual', !settings.visualAids);
+        document.body.classList.toggle('gestures', !!settings.gestures);
     }
 
     function testStory() {
@@ -1490,6 +1710,60 @@ const App = (() => {
     }
 
     // ═══════════════════════════════════════════════════
+    // Gestos táctiles sobre el campo de batalla
+    // Toque con 1, 2, 3 o 4 dedos: Agua, Fuego, Tierra o Viento.
+    // Deslizar un dedo: lanzar hacia ese lado. Dos dedos: repetir. Tres: pausa.
+    // ═══════════════════════════════════════════════════
+
+    function initGestures() {
+        const stage = $('combat-stage');
+        const ELS = [null, 'agua', 'fuego', 'tierra', 'viento'];
+        const SWIPE = 40;   // píxeles a partir de los cuales un toque cuenta como deslizamiento
+        let g = null;       // gesto en curso
+        const playing = () => settings.gestures && (combat.active || tutorial.running) && !Dialog.active && !Narration.active;
+
+        stage.addEventListener('touchstart', e => {
+            if (Ritual.active) { e.preventDefault(); unlock(); Ritual.hold(); return; }
+            if (!playing()) return;
+            e.preventDefault();
+            unlock();
+            const t = e.touches[0];
+            if (!g) g = { x: t.clientX, y: t.clientY, lastX: t.clientX, lastY: t.clientY, fingers: 0 };
+            g.fingers = Math.max(g.fingers, e.touches.length);
+        }, { passive: false });
+
+        stage.addEventListener('touchmove', e => {
+            if (!g) return;
+            e.preventDefault();
+            g.lastX = e.touches[0].clientX;
+            g.lastY = e.touches[0].clientY;
+        }, { passive: false });
+
+        stage.addEventListener('touchend', e => {
+            if (Ritual.active) { e.preventDefault(); if (e.touches.length === 0) Ritual.release(); return; }
+            if (!g || e.touches.length > 0) return;   // se espera a que se levanten todos los dedos
+            e.preventDefault();
+            const done = g;
+            g = null;
+            if (!playing()) return;
+            const dx = done.lastX - done.x, dy = done.lastY - done.y;
+            if (Math.hypot(dx, dy) < SWIPE) {
+                if (done.fingers <= 4) input.armElement(ELS[done.fingers], false, 2500);
+            } else if (done.fingers === 1) {
+                input.viaTouch = true;
+                input.fireDirection(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+            } else if (done.fingers === 2) input.handler?.onCommand?.('repeat');
+            else if (done.fingers === 3) input.handler?.onCommand?.('pause');
+        }, { passive: false });
+
+        stage.addEventListener('touchcancel', () => { g = null; if (Ritual.active) Ritual.release(); });
+
+        // La Concordia también se puede sostener con el ratón.
+        stage.addEventListener('mousedown', () => { if (Ritual.active) Ritual.hold(); });
+        document.addEventListener('mouseup', () => { if (Ritual.active) Ritual.release(); });
+    }
+
+    // ═══════════════════════════════════════════════════
     // Arranque
     // ═══════════════════════════════════════════════════
 
@@ -1497,8 +1771,13 @@ const App = (() => {
         UI.init({ speech, audio, settings, narrator });
         narrator.load();
         document.body.classList.toggle('no-visual', !settings.visualAids);
+        document.body.classList.toggle('gestures', !!settings.gestures);
         document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('keyup', e => { if (UI.current === 'combat') input.keyup(e); });
+        document.addEventListener('keyup', e => {
+            if (Ritual.active) Ritual.key(e, false);
+            else if (UI.current === 'combat') input.keyup(e);
+        });
+        initGestures();
         // En iPhone (y con VoiceOver) solo cuentan como gesto el toque al soltar y el clic.
         document.addEventListener('pointerdown', unlock, { capture: true });
         document.addEventListener('touchend', unlock, { capture: true, passive: true });
@@ -1557,6 +1836,7 @@ const App = (() => {
             setTimeScale(v) { combat.timeScale = v; },
             login, goMenu, startStory, playCampaignLevel, playRouteLevel, playGuardian, playFinal,
             startArena, startPractice, startTutorial, showRouteSelect,
+            openTutorial, openReplay, replayConcordia, ritual: Ritual,
         },
     };
 })();

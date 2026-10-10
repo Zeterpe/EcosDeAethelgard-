@@ -44,6 +44,7 @@ class InputSystem {
     #armed = new Map();    // elemento → instante en que se pulsó
     #held = new Set();
     handler = null;        // { onElement, onSpell, onAim, onCommand }
+    viaTouch = false;      // el último hechizo se lanzó con un gesto táctil (para dar los avisos adecuados)
     onChange = null;       // (armedIds) → para la interfaz
 
     constructor(settings) { this.#settings = settings; }
@@ -70,6 +71,7 @@ class InputSystem {
         if (!m) return false;
         e.preventDefault();
         if (e.repeat) return true;
+        this.viaTouch = false;
         if (m.kind === 'element') this.armElement(m.id, true);
         else if (m.kind === 'direction') this.fireDirection(m.id);
         else this.handler?.onCommand?.(m.id);
@@ -86,9 +88,11 @@ class InputSystem {
         }
     }
 
-    armElement(elId, fromKey = false) {
+    /** minWindow: tiempo mínimo (ms) que queda cargado; los gestos táctiles son más lentos que las teclas. */
+    armElement(elId, fromKey = false, minWindow = 0) {
+        if (!elId) return;
         if (fromKey) this.#held.add(elId);
-        this.#armed.set(elId, performance.now());
+        this.#armed.set(elId, performance.now() + Math.max(0, minWindow - this.#settings.comboWindow));
         this.handler?.onElement?.(elId);
         this.#notify();
     }
