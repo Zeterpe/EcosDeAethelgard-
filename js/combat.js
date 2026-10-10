@@ -588,7 +588,9 @@ class CombatEngine {
         if (this.#aimWarned < 2) {
             this.#aimWarned++;
             const sc = KEY_SCHEMES[this.#d.settings.keyScheme];
-            this.#d.speech.say(`Primero un elemento: ${sc.spoken.agua}, ${sc.spoken.fuego}, ${sc.spoken.tierra} o ${sc.spoken.viento}.`);
+            this.#d.speech.say(this.#d.input.viaTouch
+                ? 'Primero un elemento: toca con uno, dos, tres o cuatro dedos, y después desliza.'
+                : `Primero un elemento: ${sc.spoken.agua}, ${sc.spoken.fuego}, ${sc.spoken.tierra} o ${sc.spoken.viento}.`);
         }
     }
 

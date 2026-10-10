@@ -15,6 +15,7 @@ class Tutorial {
     #gen = 0;
     #eventWaiter = null;
     #running = false;
+    #pauseAsked = false;
     debugExpect = null;   // respuesta esperada (solo para pruebas automáticas)
 
     constructor(deps) { this.#d = deps; }
@@ -26,6 +27,7 @@ class Tutorial {
         this.stop();
         const gen = ++this.#gen;
         this.#running = true;
+        this.#pauseAsked = false;
         const input = this.#d.input;
         input.reset();
         input.handler = {
@@ -43,6 +45,7 @@ class Tutorial {
     stop() {
         this.#gen++;
         this.#running = false;
+        this.debugExpect = null;
         const w = this.#eventWaiter;
         this.#eventWaiter = null;
         w?.(null);
@@ -50,9 +53,21 @@ class Tutorial {
 
     #emit(evt) {
         const w = this.#eventWaiter;
-        if (!w) return;
+        if (!w) {
+            // Durante una explicación no hay ejercicio esperando: Escape corta la frase y pregunta si salir.
+            if (evt.type === 'command' && evt.id === 'pause' && this.#running) { this.#pauseAsked = true; this.#d.speech.cancel(); }
+            return;
+        }
         this.#eventWaiter = null;
         w(evt);
+    }
+
+    /** Si se pidió salir durante una explicación, lo pregunta. Devuelve true si hay que salir. */
+    async #leaving(gen) {
+        if (!this.#pauseAsked) return gen !== this.#gen;
+        this.#pauseAsked = false;
+        const exit = await this.#d.confirmExit();
+        return exit || gen !== this.#gen;
     }
 
     #nextEvent(gen) {
@@ -114,10 +129,15 @@ class Tutorial {
         for (let i = 0; i < lines.length; i++) {
             if (gen !== this.#gen) return false;
             await this.#say(gen, lines[i]);
+            if (this.#pauseAsked) {
+                if (await this.#leaving(gen)) return false;
+                i--;                // se quedó a medias: la frase se repite
+                continue;
+            }
             if (playAfter[i]) { playAfter[i](); await this.#wait(1700); }
             await this.#wait(250);
         }
-        return gen === this.#gen;
+        return !(await this.#leaving(gen));
     }
 
     async #run(gen, from) {

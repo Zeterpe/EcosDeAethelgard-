@@ -50,6 +50,14 @@ d.narrator.diagnose()          // estado de la narración grabada
 
 Ojo: muchas de estas funciones devuelven una promesa que solo termina al acabar el flujo; llámalas sin `await`.
 
+**Comprobaciones automáticas** (no instalan nada; GitHub las lanza también en cada rama con la acción «Comprobar el juego»):
+
+```bash
+node tools/comprobar.mjs
+```
+
+Revisan que la versión coincida en `js/data.js` y en todos los `?v=`, el orden de los scripts, que la narración se pueda generar y cuántos párrafos conservan su voz grabada, y la lógica (hechizos, azar con semilla, rachas, medallas y partidas guardadas). Si añades lógica nueva que se pueda comprobar sin navegador, añade ahí su prueba.
+
 **Comprobación mínima antes de subir un cambio:** entrenamiento, nivel 1, un guardián, Biblioteca → Archivo de ecos (debe sonar el narrador grabado), Opciones → «Comprobar la voz de la historia», y que la consola no muestre errores.
 
 ## Reglas importantes
@@ -66,7 +74,9 @@ Ojo: muchas de estas funciones devuelven una promesa que solo termina al acabar 
    - Usa `UI.show`, `Dialog.open`, `ListScreen.open` y `UI.say`, que gestionan el foco y los anuncios.
    - Todo se maneja con teclado y con pantalla táctil.
    - Respeta los ajustes: modo lector de pantalla (`settings.output === 'sr'`), audio mono, nivel de anuncios (`verbosity`) y las velocidades de voz.
-5. **Azar.** En la lógica de juego usa `rand()`, `pick()` y `shuffle()` de `js/data.js` (tienen semilla para el desafío diario y los duelos). `Math.random` solo para efectos de sonido.
+   - Lo que la voz del juego añade a un control va en `data-desc` (lo amplía) o `data-speak` (lo sustituye): `js/ui.js` lo expone solo al lector de pantalla. No lo digas con `speech.say` aparte.
+   - Lo que haya que decir justo antes de cambiar de pantalla o de abrir un diálogo va en la entrada (`intro`) de esa pantalla o en el texto del diálogo: dicho aparte, la pantalla siguiente lo corta.
+5. **Azar.** En la lógica de juego usa `rand()`, `pick()` y `shuffle()` de `js/data.js` (tienen semilla para el desafío diario y los duelos). `Math.random` solo para efectos de sonido. En el combate, lo que deba salir igual para todos los jugadores va dentro de `GameRandom.scoped('etiqueta', …)`: así no depende de cuánto azar haya gastado antes cada uno (quien falla tiene más turnos).
 6. **No romper partidas guardadas.**
    - Los campos nuevos del perfil van en `newProfile()` y se rellenan en `migrateProfile()` (`js/storage.js`).
    - Los ajustes nuevos van en `DEFAULT_SETTINGS`. Si cambias un valor por defecto que ya tenían guardado los jugadores, usa `settingsVersion`.

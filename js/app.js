@@ -1097,8 +1097,7 @@ const App = (() => {
         const done = await Ritual.run();
         if (!alive()) return;
         const got = done ? unlockAch('oyente') : null;
-        openLibrary(5);
-        if (done && !got) speech.say('La campana ha sonado, y has soltado el Aliento a tiempo.', { interrupt: false });
+        openLibrary(5, !done ? '' : got ? `La campana ha sonado. Logro desbloqueado: ${got}.` : 'La campana ha sonado, y has soltado el Aliento a tiempo.');
     }
 
     // ═══════════════════════════════════════════════════
@@ -1279,11 +1278,12 @@ const App = (() => {
         return t === 'basic' || t === 'elite' || profile.met.includes(id);
     }
 
-    function openLibrary(focusIndex = 0) {
+    /** said: lo que acaba de pasar (se dice al entrar, para que nada lo corte). */
+    function openLibrary(focusIndex = 0, said = '') {
         flow++;
         const known = BESTIARY_ORDER.filter(id => profile.met.includes(id)).length;
         ListScreen.open({
-            title: 'Biblioteca', intro: 'Biblioteca de la Academia.', focusIndex,
+            title: 'Biblioteca', intro: said ? `${said} Biblioteca.` : 'Biblioteca de la Academia.', focusIndex,
             items: [
                 { label: 'Bestiario', sub: `${known} de ${BESTIARY_ORDER.length} criaturas encontradas`, icon: '📖', action: () => openBestiary() },
                 { label: 'Grimorio de hechizos', sub: 'Los cuatro elementos y los seis dúos', icon: '✨', action: () => openGrimoire() },
@@ -1750,6 +1750,7 @@ const App = (() => {
             if (Math.hypot(dx, dy) < SWIPE) {
                 if (done.fingers <= 4) input.armElement(ELS[done.fingers], false, 2500);
             } else if (done.fingers === 1) {
+                input.viaTouch = true;
                 input.fireDirection(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
             } else if (done.fingers === 2) input.handler?.onCommand?.('repeat');
             else if (done.fingers === 3) input.handler?.onCommand?.('pause');

@@ -451,7 +451,10 @@ function fmtNum(n) { return Math.round(n).toLocaleString('es-ES'); }
 function fmtDecimal(n, digits = 1) { return n.toFixed(digits).replace('.', ','); }
 function joinY(list) {
     if (list.length <= 1) return list.join('');
-    return list.slice(0, -1).join(', ') + ' y ' + list[list.length - 1];
+    // «e» ante una palabra que empieza por el sonido i («Primera Sangre e Intocable»), salvo «hie-».
+    const last = String(list[list.length - 1]);
+    const y = /^h?i(?![aeoáéó])/i.test(last) ? 'e' : 'y';
+    return `${list.slice(0, -1).join(', ')} ${y} ${last}`;
 }
 function elementNames(ids) { return joinY(ids.map(id => ELEMENTS[id].name)); }
 function escapeHtml(s) {
