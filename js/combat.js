@@ -62,13 +62,16 @@ function makeInstance(defId, o = {}) {
     };
 }
 
-function buildBag({ count, pool, elite = 0, ensure = [] }) {
+function buildBag({ count, pool, elite = 0, rare = 0.18, ensure = [] }) {
     const basics = pool.filter(id => ENEMIES[id].tier === 'basic');
     const elites = pool.filter(id => ENEMIES[id].tier === 'elite');
+    const rares = pool.filter(id => ENEMIES[id].tier === 'rare');
     const bag = [];
     for (let i = 0; i < count; i++) {
-        const useElite = elites.length > 0 && (basics.length === 0 || rand() < elite);
-        bag.push(makeInstance(pick(useElite ? elites : basics)));
+        const useElite = elites.length > 0 && ((basics.length === 0 && rares.length === 0) || rand() < elite);
+        // Las raras solo gastan azar si el nivel las tiene: sin ellas, las oleadas salen igual que antes.
+        const useRare = !useElite && rares.length > 0 && (basics.length === 0 || rand() < rare);
+        bag.push(makeInstance(pick(useElite ? elites : useRare ? rares : basics)));
     }
     let slot = 0;
     for (const id of ensure) {
@@ -193,6 +196,34 @@ const MECHANICS = {
         },
     },
 
+    // ── Criaturas raras: cada una pide escuchar de otra manera ──
+
+    // Fuego Errante: se mueve antes de atacar; hay que apuntar a donde termina.
+    wander: {
+        prepare(api, inst, turn) {
+            turn.sweep = [pick(DIR_IDS.filter(d => d !== turn.dir)), turn.dir];
+            turn.sweepKind = 'wisp';
+            turn.hideDir = !api.revealDir();
+        },
+    },
+
+    // Susurro de Bruma: suena muy bajo y una sola vez (no se puede repetir con Espacio).
+    hush: {
+        prepare(api, inst, turn) {
+            turn.whisper = true;
+            turn.once = true;
+            turn.hideDir = !api.revealDir();
+        },
+    },
+
+    // Gemelos de Piedra: suenan a la vez en dos posiciones y hay que alcanzar a los dos en el mismo turno.
+    twins: {
+        prepare(api, inst, turn) {
+            turn.hideDir = !api.revealDir();
+            if (inst.lives >= 2) turn.pair = [turn.dir, pick(DIR_IDS.filter(d => d !== turn.dir))];
+        },
+    },
+
     mimic: {
         prepare(api, inst, turn) {
             const pool = (inst.st.mimic || BASICS).filter(id => id !== inst.st.lastMimic);
@@ -261,7 +292,7 @@ class CombatEngine {
             score: Math.round(this.#score), streak: this.#streak, mult: this.#mult, wave: this.#wave,
             bag: this.#bag.map(i => ({ id: i.def.id, lives: i.lives })),
             turn: t && {
-                enemy: t.inst.def.id, dir: t.dir, profile: t.profile, shield: !!t.shield,
+                enemy: t.inst.def.id, dir: t.dir, pair: t.pair || null, profile: t.profile, shield: !!t.shield,
                 mimic: t.mimic?.id || null, lives: t.inst.lives, resolved: t.resolved, total: t.total, elapsed: t.elapsed,
             },
         };
@@ -481,9 +512,15 @@ class CombatEngine {
     #playCue(turn) {
         const a = this.#d.audio;
         if (turn.sweep) {
-            const delay = a.playSweep(turn.sweep);
+            const delay = a.playSweep(turn.sweep, 0.4, turn.sweepKind);
             const dur = a.playVoice(turn.voice, turn.dir, { delay });
             return { dur, extraMs: delay * 1000 };
+        }
+        if (turn.pair) {
+            // Los dos gemelos suenan casi a la vez, uno un poco más agudo, cada uno en su sitio.
+            let dur = 0;
+            turn.pair.forEach((dir, i) => { dur = Math.max(dur, a.playVoice(turn.voice, dir, { delay: i * 0.09, pitch: i ? 1.12 : 1 })); });
+            return { dur, extraMs: 700 };
         }
         if (turn.decoys) {
             const seq = turn.decoySeq || (turn.decoySeq = shuffle([...turn.decoys.map(d => ({ d, far: true })), { d: turn.dir, far: false }]));
@@ -503,6 +540,9 @@ class CombatEngine {
     }
 
     #hintsOn() { return DIFFICULTIES[this.#d.settings.difficulty].hints || !!this.#enc?.practice; }
+
+    /** «izquierda», o «izquierda y arriba» para los Gemelos. */
+    #dirName(turn) { return turn.pair ? joinY(turn.pair.map(d => DIRECTIONS[d].name)) : DIRECTIONS[turn.dir].name; }
 
     #dirSpoken(turn, v = this.#d.settings.verbosity) {
         const s = this.#d.settings, forced = this.#forceReveal();
@@ -529,7 +569,7 @@ class CombatEngine {
         } else {
             const p = [];
             if (v !== 'sonido') p.push(turn.label || (v === 'breve' ? def.short : def.name));
-            if (this.#dirSpoken(turn, v)) p.push(DIRECTIONS[turn.dir].name);
+            if (this.#dirSpoken(turn, v)) p.push(this.#dirName(turn));
             const lm = turn.inst.maxLives;
             if (lm > 1 && (v === 'completo' || (v === 'normal' && lm <= 8))) p.push(plural(turn.inst.lives, 'vida', 'vidas'));
             if (v !== 'sonido' && this.#hintsOn()) p.push(this.#hintShort(turn));
@@ -599,8 +639,11 @@ class CombatEngine {
         if (this.#paused) return;
         const t = this.#turn;
         if (cmd === 'repeat') {
-            if (this.#state === 'turn' && t && !t.resolved) { this.#playCue(t); this.#announce(t, { asked: true }); }
-            else this.#d.speech.say('Espera al siguiente enemigo.');
+            if (this.#state === 'turn' && t && !t.resolved) {
+                // El Susurro suena una sola vez (con pistas, en Aprendiz y en la práctica, sí se repite).
+                if (t.once && !this.#hintsOn()) this.#d.speech.say(`${capFirst(shortWithArt(t.inst.def))} solo se oye una vez.`);
+                else { this.#playCue(t); this.#announce(t, { asked: true }); }
+            } else this.#d.speech.say('Espera al siguiente enemigo.');
         } else if (cmd === 'status') {
             this.#d.speech.say(this.statusText());
         } else if (cmd === 'hint') {
@@ -656,7 +699,7 @@ class CombatEngine {
             return;
         }
         const who = t.mimic ? 'la Sombra' : shortWithArt(t.inst.def);
-        const msg = this.#enc.practice ? 'Se acabó el tiempo.' : `¡${capFirst(who)} te ataca!`;
+        const msg = this.#enc.practice ? 'Se acabó el tiempo.' : `¡${capFirst(who)} te ${t.inst.def.plural && !t.mimic ? 'atacan' : 'ataca'}!`;
         this.#mistake(gen, t, msg, this.#lesson(t));
     }
 
@@ -668,21 +711,22 @@ class CombatEngine {
             this.#mistake(gen, t, '¡El escudo de piedra refleja tu hechizo!', this.#lesson(t));
             return;
         }
-        if (spell.dir !== t.dir) {
+        if (!(t.pair || [t.dir]).includes(spell.dir)) {
             this.#d.audio.wrongDir();
-            this.#mistake(gen, t, `Fallo de dirección: estaba ${DIRECTIONS[t.dir].name}.`, null);
+            this.#mistake(gen, t, `Fallo de dirección: ${t.pair ? 'estaban' : 'estaba'} ${this.#dirName(t)}.`, null);
             return;
         }
+        t.hitDir = spell.dir;   // con los Gemelos, a cuál de los dos se ha alcanzado
         const eff = evaluateSpell(spell, t.profile);
         if (eff.type === 'miss') {
-            this.#d.audio.miss(t.dir);
+            this.#d.audio.miss(spell.dir);
             this.#mistake(gen, t, `${spell.name}: ineficaz.`, this.#lesson(t));
             return;
         }
         if (eff.type === 'cure' || eff.type === 'critcure') {
-            this.#d.audio.cure(t.dir);
+            this.#d.audio.cure(spell.dir);
             t.inst.lives = Math.min(t.inst.maxLives, t.inst.lives + eff.delta);
-            const pr = (t.mimic || t.inst.def).art === 'la' || t.mimic ? 'la' : 'lo';
+            const pr = t.inst.def.plural && !t.mimic ? 'los' : (t.mimic || t.inst.def).art === 'la' || t.mimic ? 'la' : 'lo';
             this.#mistake(gen, t, eff.type === 'critcure' ? `¡${spell.name} ${pr} fortalece muchísimo!` : `¡${spell.name} ${pr} cura!`, this.#lesson(t));
             return;
         }
@@ -724,11 +768,27 @@ class CombatEngine {
         let pts = (crit ? SCORE.crit : SCORE.hit) * this.#mult * (fast ? 1 + SCORE.speedBonus : 1);
         if (killed) pts += SCORE.kill[inst.def.tier] ?? 50;
         this.#addScore(pts);
-        this.#d.audio.hit(t.dir, crit);
+        const where = t.hitDir ?? t.dir;
+        this.#d.audio.hit(where, crit);
         if (fast && !this.#enc.practice) this.#d.audio.quick();   // respuesta rápida: puntos extra
         this.#ui('hit', { crit, killed });
         if (crit) this.#d.onEvent?.('crit', {});
         this.#d.onEvent?.('streak', { streak: this.#streak });
+
+        if (t.pair && !killed) {
+            // Gemelos: ha caído uno. El turno sigue con el otro, sin parar el reloj (solo un respiro).
+            t.dir = t.pair.find(d => d !== where) ?? t.dir;
+            t.pair = null;
+            t.hitDir = null;
+            t.resolved = false;
+            t.elapsed = Math.max(0, t.elapsed - 500);
+            this.#state = 'turn';
+            this.#hud();
+            this.#ui('enemy', { turn: t, showDir: this.#dirVisible(t) });
+            this.#d.audio.playVoice(t.voice, t.dir, { pitch: 1.12, delay: 0.25 });
+            this.#d.speech.say('¡Uno! Queda el otro.');
+            return;
+        }
 
         let msg = crit ? '¡Crítico! ' : '';
         let healed = false;
@@ -743,7 +803,7 @@ class CombatEngine {
         if (killed) {
             this.#stats.kills++;
             this.#bag = this.#bag.filter(i => i !== inst);
-            this.#d.audio.kill(t.dir, inst.def.tier);
+            this.#d.audio.kill(where, inst.def.tier);
             this.#d.onEvent?.('kill', { def: inst.def });
             const who = t.mimic ? 'Sombra' : inst.def.short;
             const quiet = this.#d.settings.verbosity === 'sonido';
@@ -757,7 +817,7 @@ class CombatEngine {
             const n = this.#bag.length;
             if (n > 0 && (quiet ? n <= 3 : n <= 3 || n % 5 === 0)) msg += n === 1 ? ' Queda 1.' : ` Quedan ${n}.`;
         } else {
-            msg += `Le ${inst.lives === 1 ? 'queda 1 vida' : `quedan ${inst.lives} vidas`}.`;
+            msg += `${inst.def.plural && !t.mimic ? 'Les' : 'Le'} ${inst.lives === 1 ? 'queda 1 vida' : `quedan ${inst.lives} vidas`}.`;
             await this.#checkPhase(gen, inst);
             if (gen !== this.#gen) return;
         }
