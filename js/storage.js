@@ -23,6 +23,9 @@ const DEFAULT_SETTINGS = {
     visualAids: true,
     storyVoice: 'grabada',    // grabada: narradores generados · sistema: voz del navegador
     storyRate: 1.5,           // velocidad de la historia, aparte de la voz del juego (0,8 a 2)
+    narrationHint: false,     // ya se ha explicado en voz alta cómo pasar y saltar narraciones
+    gestures: true,           // gestos táctiles sobre el campo de batalla
+    vibration: true,          // vibración al acertar y al recibir daño (móviles que la admiten)
     settingsVersion: 2,
 };
 
@@ -98,10 +101,13 @@ function newProfile(username) {
     return {
         v: 2, username, createdAt: Date.now(), lastPlayed: Date.now(),
         introSeen: false, tutorialDone: false, echosSeen: [], loreSeen: [],
+        tutorialStep: 0,      // capítulo del entrenamiento hasta el que se ha llegado
         story: {
             level: 1,
             routeProgress: { fire: 0, water: 0, wind: 0, earth: 0 },
             routesDone: [], finalDone: false, defeatsInRow: 0,
+            medals: {},       // nivel → 1 bronce · 2 plata · 3 oro
+            bestScores: {},   // nivel → mejor puntuación
         },
         achievements: [], bossesDefeated: [], met: [],
         stats: {
@@ -124,6 +130,10 @@ function migrateProfile(raw) {
         Object.assign(p, raw);
         p.story = { ...newProfile('').story, ...(raw.story || {}) };
         p.story.routeProgress = { fire: 0, water: 0, wind: 0, earth: 0, ...(raw.story?.routeProgress || {}) };
+        for (const k of ['medals', 'bestScores']) {
+            if (!p.story[k] || typeof p.story[k] !== 'object' || Array.isArray(p.story[k])) p.story[k] = {};
+        }
+        p.tutorialStep = +p.tutorialStep || 0;
         p.stats = { ...newProfile('').stats, ...(raw.stats || {}) };
         p.arena = { ...newProfile('').arena, ...(raw.arena || {}) };
         p.duels = { ...newProfile('').duels, ...(raw.duels || {}) };

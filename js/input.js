@@ -86,9 +86,11 @@ class InputSystem {
         }
     }
 
-    armElement(elId, fromKey = false) {
+    /** minWindow: tiempo mínimo (ms) que queda cargado; los gestos táctiles son más lentos que las teclas. */
+    armElement(elId, fromKey = false, minWindow = 0) {
+        if (!elId) return;
         if (fromKey) this.#held.add(elId);
-        this.#armed.set(elId, performance.now());
+        this.#armed.set(elId, performance.now() + Math.max(0, minWindow - this.#settings.comboWindow));
         this.handler?.onElement?.(elId);
         this.#notify();
     }

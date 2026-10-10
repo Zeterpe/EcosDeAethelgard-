@@ -834,6 +834,60 @@ class AudioEngine {
         [1, 1.26, 1.5].forEach((r, i) => k.tone(out, { t: t + i * 0.06, f: base * r, type: 'triangle', dur: 0.15, a: 0.003, r: 0.12, peak: 0.1 }));
     }
 
+    /** Respuesta rápida: un destello agudo y breve que avisa de los puntos extra. */
+    quick() {
+        if (!this.ctx) return;
+        const k = this.kit, t = this.ctx.currentTime + 0.2, out = this.#ui;
+        [2637, 3520].forEach((f, i) => k.tone(out, { t: t + i * 0.045, f, dur: 0.07, a: 0.002, r: 0.06, exp: true, peak: 0.07 }));
+    }
+
+    // ── La Concordia ────────────────────────────────────
+
+    /** La campana de Ignar: avisa al Oyente de que es hora de soltar el Aliento. */
+    greatBell() {
+        if (!this.ctx) return;
+        const k = this.kit, t = this.ctx.currentTime + 0.02, out = this.#sfx;
+        k.bell(out, { t, f: 196, partials: [[1, 1, 4.5], [2.01, 0.6, 3.4], [2.76, 0.45, 2.6], [4.1, 0.3, 1.8], [5.4, 0.18, 1.2]], peak: 0.5 });
+        k.noise(out, { t, color: 'white', dur: 0.04, a: 0.001, r: 0.04, peak: 0.4, filter: { type: 'highpass', f: 2200 } });
+        this.duck(t, t + 3, 0.2);
+    }
+
+    /** El Aliento sostenido: un soplo que crece mientras se mantiene. Devuelve la función que lo suelta. */
+    breath() {
+        if (!this.ctx) return () => { };
+        const c = this.ctx, t = c.currentTime;
+        const src = c.createBufferSource();
+        src.buffer = this.kit.buf.pink; src.loop = true;
+        const f = c.createBiquadFilter();
+        f.type = 'bandpass'; f.Q.value = 1.4;
+        f.frequency.setValueAtTime(500, t);
+        f.frequency.linearRampToValueAtTime(1500, t + 9);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.5, t + 1.2);
+        const osc = c.createOscillator();
+        osc.frequency.value = 110;
+        const og = c.createGain();
+        og.gain.setValueAtTime(0, t);
+        og.gain.linearRampToValueAtTime(0.12, t + 1.5);
+        src.connect(f); f.connect(g); g.connect(this.#sfx);
+        osc.connect(og); og.connect(this.#sfx);
+        src.start(t, Math.random()); osc.start(t);
+        let stopped = false;
+        return () => {
+            if (stopped) return;
+            stopped = true;
+            const now = c.currentTime;
+            for (const x of [g, og]) {
+                try { x.gain.cancelScheduledValues(now); x.gain.setTargetAtTime(0, now, 0.12); } catch (_) { /* nada */ }
+            }
+            setTimeout(() => {
+                try { src.stop(); osc.stop(); } catch (_) { /* ya parado */ }
+                for (const x of [src, f, g, osc, og]) { try { x.disconnect(); } catch (_) { /* nada */ } }
+            }, 900);
+        };
+    }
+
     tick(urgency = 0) {
         if (!this.ctx) return;
         const k = this.kit, t = this.ctx.currentTime + 0.005;

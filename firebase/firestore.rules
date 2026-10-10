@@ -58,10 +58,16 @@ service cloud.firestore {
     match /challenges/{id} {
       allow read: if signedIn()
         && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid || isAdmin());
+      // El nombre del retador tiene que ser el suyo de verdad (el de su ficha): el juego se lo
+      // lee en voz alta al rival, así que no puede ser un texto cualquiera.
       allow create: if signedIn()
         && request.resource.data.fromUid == request.auth.uid
         && request.resource.data.toUid != request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        && request.resource.data.fromName is string
+        && request.resource.data.toName is string
+        && request.resource.data.toName.size() <= 24
+        && request.resource.data.fromName == get(/databases/$(database)/documents/players/$(request.auth.uid)).data.name;
       allow update: if isAdmin()
         || (signedIn() && resource.data.toUid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['toScore', 'toWave', 'status', 'finishedAt']))

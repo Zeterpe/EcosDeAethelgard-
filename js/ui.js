@@ -27,6 +27,55 @@ const UI = {
         document.querySelectorAll('.screen').forEach(el => { this.screens[el.id.replace('screen-', '')] = el; });
         document.addEventListener('focusin', e => this._onFocus(e));
         speech.onCaption = text => this.caption(text);
+        this._watchA11y();
+    },
+
+    /**
+     * Lector de pantalla: lo que la voz del juego dice de cada control (data-speak sustituye su
+     * texto, data-desc lo amplía) se expone también como nombre y descripción accesibles. Sin
+     * esto, quien juega con su lector no oía las descripciones de los botones.
+     */
+    _syncA11y(el) {
+        if (el.dataset.speak) el.setAttribute('aria-label', el.dataset.speak);
+        const desc = el.dataset.desc;
+        let span = this._descOf.get(el);
+        if (!desc) {
+            if (span) { span.remove(); this._descOf.delete(el); el.removeAttribute('aria-describedby'); }
+            return;
+        }
+        if (!span) {
+            span = document.createElement('span');
+            span.id = `desc-${++this._descN}`;
+            $('a11y-desc').appendChild(span);
+            this._descOf.set(el, span);
+            el.setAttribute('aria-describedby', span.id);
+        }
+        if (span.textContent !== desc) span.textContent = desc;
+    },
+
+    _watchA11y() {
+        this._descOf = new WeakMap();
+        this._descN = 0;
+        const sel = '[data-desc],[data-speak]';
+        const scan = root => {
+            if (root.nodeType !== 1) return;
+            if (root.matches(sel)) this._syncA11y(root);
+            root.querySelectorAll(sel).forEach(el => this._syncA11y(el));
+        };
+        const drop = root => {
+            if (root.nodeType !== 1) return;
+            for (const el of [root, ...root.querySelectorAll('[aria-describedby^="desc-"]')]) {
+                const span = this._descOf.get(el);
+                if (span && !el.isConnected) { span.remove(); this._descOf.delete(el); }
+            }
+        };
+        new MutationObserver(list => {
+            for (const m of list) {
+                if (m.type === 'attributes') this._syncA11y(m.target);
+                else { m.removedNodes.forEach(drop); m.addedNodes.forEach(scan); }
+            }
+        }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-desc', 'data-speak'] });
+        scan(document.body);
     },
 
     show(name, { focus = null, intro = null, silent = false } = {}) {
@@ -282,8 +331,11 @@ const Narration = {
     _recorded: false,
     _token: 0,
 
-    /** key: sección de la historia con narración grabada (si existe). */
-    async run(paragraphs, { title = '', pitch = 1, gap = 450, key = null } = {}) {
+    /**
+     * key: sección de la historia con narración grabada (si existe).
+     * offset: los párrafos son solo un tramo de esa sección, a partir de ese índice.
+     */
+    async run(paragraphs, { title = '', pitch = 1, gap = 450, key = null, offset = null } = {}) {
         if (!paragraphs || !paragraphs.length) return true;
         const token = ++this._token;
         const current = () => token === this._token;
@@ -301,7 +353,14 @@ const Narration = {
             $('narration-text').textContent = p;
             $('narration-progress').textContent = n > 1 ? `${i + 1} de ${n}` : '';
         };
-        const plan = UI.narrator ? UI.narrator.plan(key, paragraphs) : null;
+        // La primera vez se explica en voz alta cómo pasar o saltar una narración (antes solo estaba escrito).
+        if (!UI.settings.narrationHint) {
+            UI.settings.narrationHint = true;
+            Storage.saveSettings(UI.settings);
+            await UI.speech.say('Durante una narración, Enter pasa al párrafo siguiente y Escape la salta entera.');
+            if (!current()) return false;
+        }
+        const plan = UI.narrator ? UI.narrator.plan(key, paragraphs, offset) : null;
         // Solo la historia (las narraciones con clave) usa la «Velocidad de la historia», aparte de la del juego.
         const story = key ? clamp(UI.settings.storyRate || 1.5, 0.8, 2) : null;
         const rate = story ? story / (UI.settings.speechRate || 1) : 1;      // para la voz del sistema
@@ -662,8 +721,13 @@ const CombatView = {
         st.classList.remove(cls); void st.offsetWidth; st.classList.add(cls);
         setTimeout(() => st.classList.remove(cls), 600);
     },
-    hurt() { this._flash('flash-hurt'); },
-    hit({ crit }) { this._flash(crit ? 'flash-crit' : 'flash-hit'); },
+    /** Vibración (solo en los móviles que la admiten; en iPhone no existe). */
+    _vibrate(pattern) {
+        if (!UI.settings.vibration) return;
+        try { navigator.vibrate?.(pattern); } catch (_) { /* no disponible */ }
+    },
+    hurt() { this._flash('flash-hurt'); this._vibrate(180); },
+    hit({ crit }) { this._flash(crit ? 'flash-crit' : 'flash-hit'); this._vibrate(crit ? [25, 40, 25] : 25); },
 
     armed(list) {
         document.querySelectorAll('.pad-btn[data-el]').forEach(b => b.classList.toggle('armed', list.includes(b.dataset.el)));

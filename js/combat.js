@@ -228,6 +228,7 @@ class CombatEngine {
     #score = 0; #streak = 0; #mult = 1;
     #stats = null;
     #wave = 0;
+    #turnNo = 0;              // turno dentro de la oleada (para el azar con semilla)
     #startedAt = 0;
     #loopIv = null; #lastFrame = 0;
     #aimWarned = 0;
@@ -278,7 +279,7 @@ class CombatEngine {
         this.#score = 0; this.#streak = 0; this.#mult = 1; this.#aimWarned = 0;
         this.#wave = enc.endless ? 1 : 0;
         this.#stats = { kills: 0, hits: 0, crits: 0, mistakes: 0, damage: 0, spells: 0, bestStreak: 0, blocks: 0 };
-        this.#bag = enc.makeBag(this.#wave);
+        this.#bag = this.#makeBag();
         this.#dirHistory = [];
         this.#lastUid = null;
         this.#startedAt = performance.now();
@@ -369,7 +370,7 @@ class CombatEngine {
         if (this.#state === 'turn' && t && !t.resolved) {
             t.elapsed = Math.max(0, t.elapsed - CFG.RESUME_GRACE_MS);
             this.#playCue(t);
-            this.#announce(t);
+            this.#announceTurn(t);
         }
     }
 
@@ -382,6 +383,15 @@ class CombatEngine {
 
     #sleep(ms) { return this.#timers.sleep(ms); }
 
+    /**
+     * Enemigos de la oleada actual. Con semilla (duelos, desafío diario), cada oleada sale de su
+     * propio azar: es la misma para todos los jugadores, falle quien falle.
+     */
+    #makeBag() {
+        this.#turnNo = 0;
+        return GameRandom.scoped(`oleada:${this.#wave}`, () => this.#enc.makeBag(this.#wave));
+    }
+
     // ── Bucle de tiempo de reacción ─────────────────────
 
     #loop() {
@@ -389,7 +399,7 @@ class CombatEngine {
         const dt = Math.min(200, now - this.#lastFrame) / this.#timers.scale;
         this.#lastFrame = now;
         const t = this.#turn;
-        if (this.#paused || this.#state !== 'turn' || !t || t.resolved) return;
+        if (this.#paused || this.#state !== 'turn' || !t || t.resolved || t.hold) return;
         t.elapsed += dt;
         const frac = Math.min(1, t.elapsed / t.total);
         this.#ui('timer', 1 - frac);
@@ -443,16 +453,18 @@ class CombatEngine {
     async #nextTurn(gen) {
         if (!(await this.#checkpoint(gen))) return;
         if (this.#bag.length === 0) { this.#onBagEmpty(gen); return; }
-        const inst = this.#pickInstance();
+        // Con semilla, el azar de cada turno es propio: el turno 3 de la oleada 2 es igual para todos.
+        const tag = `oleada:${this.#wave}:turno:${++this.#turnNo}`;
+        const inst = GameRandom.scoped(tag, () => this.#pickInstance());
         this.#lastUid = inst.uid;
         const turn = {
-            inst, dir: this.#pickDir(), profile: inst.profile, voice: inst.def.voice,
-            elapsed: 0, total: 1, lastTick: 0, resolved: false, cueMs: 0,
+            inst, dir: GameRandom.scoped(`${tag}:dir`, () => this.#pickDir()), profile: inst.profile, voice: inst.def.voice,
+            elapsed: 0, total: 1, lastTick: 0, resolved: false, cueMs: 0, tag,
         };
         const mech = MECHANICS[inst.def.mechanic];
         if (mech?.prepare) {
             this.#state = 'mechanic';
-            await mech.prepare(this.#api, inst, turn);
+            await GameRandom.scoped(`${tag}:mec`, () => mech.prepare(this.#api, inst, turn));
             if (!(await this.#checkpoint(gen))) return;
         }
         this.#d.onEvent?.('meet', { def: inst.def });
@@ -461,7 +473,7 @@ class CombatEngine {
         turn.total = (turn.reactOverride ?? this.#reaction(inst)) + cue.extraMs;
         this.#turn = turn;
         this.#state = 'turn';
-        this.#announce(turn);
+        this.#announceTurn(turn);
         this.#ui('enemy', { turn, showDir: this.#dirVisible(turn) });
         this.#hud();
     }
@@ -523,7 +535,20 @@ class CombatEngine {
             if (v !== 'sonido' && this.#hintsOn()) p.push(this.#hintShort(turn));
             text = p.filter(Boolean).join(', ');
         }
-        if (text) this.#d.speech.say(capFirst(text) + (/[.!?…]$/.test(text) ? '' : '.'), { interrupt: true });
+        return text ? this.#d.speech.say(capFirst(text) + (/[.!?…]$/.test(text) ? '' : '.'), { interrupt: true }) : null;
+    }
+
+    /**
+     * Anuncia el turno. Con pistas (Aprendiz y práctica), el tiempo no empieza a correr hasta que
+     * la voz termina de decirlas: una pista que acaba cuando ya no queda tiempo no sirve de nada.
+     */
+    #announceTurn(turn) {
+        const said = this.#announce(turn);
+        if (!said || !this.#hintsOn() || this.#d.settings.verbosity === 'sonido') return;
+        const hold = turn.hold = {};
+        const release = () => { if (turn.hold === hold) turn.hold = null; };
+        said.then(release);
+        this.#timers.set(release, 9000);   // por si la voz no avisa de que ha terminado
     }
 
     #hintShort(turn) {
@@ -698,6 +723,7 @@ class CombatEngine {
         if (killed) pts += SCORE.kill[inst.def.tier] ?? 50;
         this.#addScore(pts);
         this.#d.audio.hit(t.dir, crit);
+        if (fast && !this.#enc.practice) this.#d.audio.quick();   // respuesta rápida: puntos extra
         this.#ui('hit', { crit, killed });
         if (crit) this.#d.onEvent?.('crit', {});
         this.#d.onEvent?.('streak', { streak: this.#streak });
@@ -777,7 +803,7 @@ class CombatEngine {
         if (!(await this.#checkpoint(gen))) return;
         const inst = t.inst, mech = MECHANICS[inst.def.mechanic];
         if (mech?.afterTurn && inst.lives > 0 && this.#bag.includes(inst)) {
-            const p = mech.afterTurn(this.#api, inst, t);
+            const p = GameRandom.scoped(`${t.tag}:fin`, () => mech.afterTurn(this.#api, inst, t));
             if (p) {
                 await Promise.race([p, this.#sleep(5000)]);
                 if (!(await this.#checkpoint(gen))) return;
@@ -809,7 +835,7 @@ class CombatEngine {
             return;
         }
         this.#wave++;
-        this.#bag = enc.makeBag(this.#wave);
+        this.#bag = this.#makeBag();
         this.#d.audio.levelComplete();
         this.#hud();
         this.#state = 'between';
