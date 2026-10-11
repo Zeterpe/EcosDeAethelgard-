@@ -64,7 +64,7 @@ A partir del nivel 22 aparecen, de una en una, tres criaturas que piden escuchar
 - **Gemelos de Piedra** (nivel 24): suenan a la vez en dos posiciones; hay que alcanzar a los dos, uno detrás de otro, en el mismo turno.
 - **Susurro de Bruma** (nivel 26): suena muy bajo y una sola vez.
 
-También salen en las rutas, en la Arena desde la oleada 8 y, una vez conocidas, en la Práctica libre. Sus textos nuevos se leen con la voz del sistema hasta que se vuelva a lanzar **Generar narración**.
+También salen en las rutas, en la Arena desde la oleada 8 y, una vez conocidas, en la Práctica libre.
 
 ## Guardianes
 
