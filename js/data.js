@@ -6,7 +6,7 @@
 'use strict';
 
 /** Versión del juego. Al publicar cambios, súbela también en los ?v= de index.html. */
-const GAME_VERSION = { id: '20261010b', spoken: '10 de octubre de 2026' };
+const GAME_VERSION = { id: '20261011a', spoken: '11 de octubre de 2026' };
 
 // ═══════════════════════════════════════════════════════
 // Elementos y ciclo elemental
