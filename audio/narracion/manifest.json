@@ -2,7 +2,7 @@
  "version": 1,
  "formato": "mp3",
  "ritmo": 1.5,
- "generado": "2026-10-08T22:14:57.598Z",
+ "generado": "2026-10-11T19:35:03.314Z",
  "secciones": {
   "echo_1": [
    {
@@ -1328,7 +1328,7 @@
     ]
    },
    {
-    "h": "ffaf17ef",
+    "h": "7311c8f1",
     "s": [
      {
       "f": "cycle-05-1.mp3",
@@ -2070,6 +2070,72 @@
     "s": [
      {
       "f": "creature_ent_forest-02-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "creature_wisp_fire": [
+   {
+    "h": "c607f6ef",
+    "s": [
+     {
+      "f": "creature_wisp_fire-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   },
+   {
+    "h": "22872dde",
+    "s": [
+     {
+      "f": "creature_wisp_fire-02-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "creature_twins_earth": [
+   {
+    "h": "fe7b1b7f",
+    "s": [
+     {
+      "f": "creature_twins_earth-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   },
+   {
+    "h": "8713f7f4",
+    "s": [
+     {
+      "f": "creature_twins_earth-02-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "creature_hush_water": [
+   {
+    "h": "c4394d26",
+    "s": [
+     {
+      "f": "creature_hush_water-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   },
+   {
+    "h": "ea2fe646",
+    "s": [
+     {
+      "f": "creature_hush_water-02-1.mp3",
       "v": "narrador",
       "e": "narrador"
      }
@@ -3129,7 +3195,7 @@
   ],
   "meet_magma_elem_2": [
    {
-    "h": "771512a1",
+    "h": "2a9c57fa",
     "s": [
      {
       "f": "meet_magma_elem_2-01-1.mp3",
@@ -3153,7 +3219,7 @@
   ],
   "meet_storm_spec_2": [
    {
-    "h": "5784b0d3",
+    "h": "59865358",
     "s": [
      {
       "f": "meet_storm_spec_2-01-1.mp3",
@@ -3177,7 +3243,7 @@
   ],
   "meet_ent_forest_2": [
    {
-    "h": "dadc3ea9",
+    "h": "d10181c6",
     "s": [
      {
       "f": "meet_ent_forest_2-01-1.mp3",
@@ -3201,10 +3267,118 @@
   ],
   "meet_djinn_desert_2": [
    {
-    "h": "4f9134dd",
+    "h": "0a6f7a3a",
     "s": [
      {
       "f": "meet_djinn_desert_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_wisp_fire_1": [
+   {
+    "h": "9edc0618",
+    "s": [
+     {
+      "f": "meet_wisp_fire_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_wisp_fire_2": [
+   {
+    "h": "73801435",
+    "s": [
+     {
+      "f": "meet_wisp_fire_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_wisp_fire_3": [
+   {
+    "h": "be69324c",
+    "s": [
+     {
+      "f": "meet_wisp_fire_3-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_twins_earth_1": [
+   {
+    "h": "75728c3a",
+    "s": [
+     {
+      "f": "meet_twins_earth_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_twins_earth_2": [
+   {
+    "h": "3c0d71f7",
+    "s": [
+     {
+      "f": "meet_twins_earth_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_twins_earth_3": [
+   {
+    "h": "7fa73bb3",
+    "s": [
+     {
+      "f": "meet_twins_earth_3-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_hush_water_1": [
+   {
+    "h": "ed00d80b",
+    "s": [
+     {
+      "f": "meet_hush_water_1-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_hush_water_2": [
+   {
+    "h": "161bee6e",
+    "s": [
+     {
+      "f": "meet_hush_water_2-01-1.mp3",
+      "v": "narrador",
+      "e": "narrador"
+     }
+    ]
+   }
+  ],
+  "meet_hush_water_3": [
+   {
+    "h": "313a2b2c",
+    "s": [
+     {
+      "f": "meet_hush_water_3-01-1.mp3",
       "v": "narrador",
       "e": "narrador"
      }
@@ -3340,7 +3514,7 @@
   "cycle-02-1.mp3": "81ee3ff3",
   "cycle-03-1.mp3": "bf8a2442",
   "cycle-04-1.mp3": "4ddaff84",
-  "cycle-05-1.mp3": "347750db",
+  "cycle-05-1.mp3": "c114de5d",
   "cycle-06-1.mp3": "38c065ec",
   "chron_1-01-1.mp3": "82feeeef",
   "chron_1-02-1.mp3": "cda5bf47",
@@ -3426,6 +3600,12 @@
   "creature_storm_spec-02-1.mp3": "3eb8c4d1",
   "creature_ent_forest-01-1.mp3": "2e7ff8f1",
   "creature_ent_forest-02-1.mp3": "fad084f7",
+  "creature_wisp_fire-01-1.mp3": "91788fdb",
+  "creature_wisp_fire-02-1.mp3": "3df09082",
+  "creature_twins_earth-01-1.mp3": "c666688b",
+  "creature_twins_earth-02-1.mp3": "aa3efb50",
+  "creature_hush_water-01-1.mp3": "22318bca",
+  "creature_hush_water-02-1.mp3": "97f433ea",
   "creature_djinn_desert-01-1.mp3": "d06665e7",
   "creature_djinn_desert-02-1.mp3": "6cf0b050",
   "route_fire_legend-01-1.mp3": "ba5a5b26",
@@ -3520,12 +3700,21 @@
   "meet_golem_earth_1-01-1.mp3": "d0b48a8b",
   "meet_golem_earth_2-01-1.mp3": "b1875b23",
   "meet_magma_elem_1-01-1.mp3": "327857e5",
-  "meet_magma_elem_2-01-1.mp3": "3466136d",
+  "meet_magma_elem_2-01-1.mp3": "41cad546",
   "meet_storm_spec_1-01-1.mp3": "a1a5c2ef",
-  "meet_storm_spec_2-01-1.mp3": "f8f80847",
+  "meet_storm_spec_2-01-1.mp3": "c9f8571c",
   "meet_ent_forest_1-01-1.mp3": "6ee050eb",
-  "meet_ent_forest_2-01-1.mp3": "a73787f5",
+  "meet_ent_forest_2-01-1.mp3": "3ad97f6a",
   "meet_djinn_desert_1-01-1.mp3": "eeda295a",
-  "meet_djinn_desert_2-01-1.mp3": "686ab0b1"
+  "meet_djinn_desert_2-01-1.mp3": "1d7a9e06",
+  "meet_wisp_fire_1-01-1.mp3": "20d27b5c",
+  "meet_wisp_fire_2-01-1.mp3": "da8e0f89",
+  "meet_wisp_fire_3-01-1.mp3": "00fb5828",
+  "meet_twins_earth_1-01-1.mp3": "a29ef006",
+  "meet_twins_earth_2-01-1.mp3": "b1875b23",
+  "meet_twins_earth_3-01-1.mp3": "4481dfa7",
+  "meet_hush_water_1-01-1.mp3": "2de0503f",
+  "meet_hush_water_2-01-1.mp3": "2acf92b2",
+  "meet_hush_water_3-01-1.mp3": "3472c488"
  }
 }

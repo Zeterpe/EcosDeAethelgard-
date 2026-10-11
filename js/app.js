@@ -476,7 +476,9 @@ const App = (() => {
     function controlsText() {
         const k = input.scheme.spoken;
         return `Elementos: ${k.agua}, Agua. ${k.fuego}, Fuego. ${k.tierra}, Tierra. ${k.viento}, Viento. ` +
-            `Pulsa el elemento y luego la flecha hacia el enemigo. Para un dúo, dos elementos a la vez y la flecha. ` +
+            `Pulsa el elemento y luego la flecha hacia el enemigo: el elemento queda cargado hasta que lanzas. ` +
+            `Si te equivocas, pulsa el que querías; al cargar oyes todos los que llevas, y si suenan dos y solo querías uno, pulsa otra vez ese. ` +
+            `Para un dúo, dos elementos a la vez y la flecha. ` +
             `Espacio repite el enemigo. Enter dice tu estado. H da una pista. V activa o desactiva los anuncios de enemigos. Escape pausa. ` +
             `Durante una narración, Enter pasa al párrafo siguiente y Escape la salta entera.`;
     }
@@ -1329,7 +1331,8 @@ const App = (() => {
     function bestiaryWeakText(def) {
         if (def.mechanic === 'mimic') return 'Su debilidad es la de la criatura que imita.';
         if (def.mechanic === 'shift') return 'Cambia de elemento: respóndele cada vez como a un guardián de ese elemento.';
-        return `${weaknessText(profileOf(def))} Nunca uses ${elementNames(def.cure)}.` +
+        return (def.elements.length > 1 ? `De ${elementNames(def.elements)}. ` : '') +
+            `${weaknessText(profileOf(def))} Nunca uses ${neverNames(def.cure)}.` +
             (def.critCure ? ` Y nunca ${def.critCure}: la curación crítica.` : '') +
             (def.tip ? ` ${def.tip}` : '');
     }
@@ -1594,7 +1597,7 @@ const App = (() => {
             { t: 'Medallas', x: 'Cada nivel de la historia que superas te da una medalla: oro si no recibes ningún golpe, plata si recibes uno solo y bronce si lo superas. En Repetir niveles, en el menú principal, puedes volver a jugar cualquier nivel superado para mejorar tu medalla.' },
             { t: 'Pantalla táctil', x: 'En móviles y tabletas puedes usar los botones de la pantalla o gestos sobre el campo de batalla. Toca con un dedo para el Agua, con dos para el Fuego, con tres para la Tierra y con cuatro para el Viento; después desliza un dedo hacia el enemigo para lanzar el hechizo. Para un dúo, haz los dos toques seguidos y luego desliza. Deslizar dos dedos repite el enemigo, y deslizar tres dedos pausa. Si usas VoiceOver o TalkBack, el lector se queda con los gestos: desactívalo mientras combates, que el juego tiene su propia voz.' },
             { t: 'Niveles especiales', x: 'Frenesí: los enemigos llegan más rápido. Niebla: no se anuncia la posición, solo la oyes. Élite: solo criaturas de dos elementos. En los niveles 15 y 25 acecha la Sombra Imitadora: imita a otras criaturas y debes responderle como a la criatura que imita.' },
-            { t: 'Criaturas raras', x: 'A partir del nivel 13 aparecen tres criaturas que piden escuchar de otra manera, y la voz no dice por dónde vienen. El Fuego Errante se mueve antes de atacar: apunta a donde termina su llama. Los Gemelos de Piedra suenan a la vez en dos posiciones: alcanza a los dos, uno detrás de otro, en el mismo turno. El Susurro de Bruma suena muy bajo y una sola vez. En dificultad Aprendiz y con audio mono, la voz sí anuncia sus posiciones.' },
+            { t: 'Criaturas raras', x: 'A partir del nivel 22 aparecen, de una en una, tres criaturas que piden escuchar de otra manera, y la voz no dice por dónde vienen. El Fuego Errante se mueve antes de atacar: apunta a donde termina su llama. Los Gemelos de Piedra suenan a la vez en dos posiciones: alcanza a los dos, uno detrás de otro, en el mismo turno. El Susurro de Bruma suena muy bajo y una sola vez. En dificultad Aprendiz y con audio mono, la voz sí anuncia sus posiciones.' },
             { t: 'Guardianes', x: 'Cada guardián tiene una mecánica propia. Ignar lanza brasas: apágalas con Agua. El Leviatán se desplaza antes de atacar: apunta a donde termina. Zael lanza ecos falsos y lejanos: apunta al grito cercano. Rok alza un escudo de piedra: cuando lo oigas, no ataques. El Avatar del Silencio cambia de elemento sin parar.' },
             { t: 'Modos de juego', x: 'Historia: treinta niveles, cuatro rutas con sus guardianes y un enemigo final. Arena: oleadas infinitas con récord. Práctica libre: sin vidas ni puntos. Entrenamiento: aprende paso a paso.' },
             { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. La historia tiene su propia velocidad, aparte de la del resto del juego. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
@@ -1646,7 +1649,7 @@ const App = (() => {
             {
                 id: 'comboWindow', label: 'Ventana de combinación', type: 'choice', values: [600, 1000, 1500, 2500],
                 labels: { 600: 'Corta, 0,6 segundos', 1000: 'Normal, 1 segundo', 1500: 'Amplia, 1,5 segundos', 2500: 'Muy amplia, 2,5 segundos' },
-                desc: 'Tiempo que un elemento queda cargado tras pulsarlo. Amplíala si te cuesta pulsar varias teclas a la vez.',
+                desc: 'Para un dúo puedes pulsar los dos elementos a la vez o uno detrás de otro: este es el tiempo que tienes para pulsar el segundo. Amplíala si te cuesta pulsar varias teclas a la vez.',
             },
             { id: 'keyScheme', label: 'Esquema de teclas', type: 'choice', values: ['clasico', 'zurdo'], labels: { clasico: KEY_SCHEMES.clasico.name, zurdo: KEY_SCHEMES.zurdo.name } },
             { id: 'ticks', label: 'Tic-tac del tiempo', type: 'bool', desc: 'Avisa con un tic-tac cuando se acaba el tiempo para responder.' },
@@ -1815,6 +1818,8 @@ const App = (() => {
         document.addEventListener('pointerdown', unlock, { capture: true });
         document.addEventListener('touchend', unlock, { capture: true, passive: true });
         document.addEventListener('click', unlock, { capture: true });
+        // Si la ventana pierde el foco con una tecla pulsada, el navegador no avisa de que se suelta.
+        window.addEventListener('blur', () => input.releaseAll());
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && combat.active && !combat.paused) openPause();
             if (document.hidden) Cloud.flush();

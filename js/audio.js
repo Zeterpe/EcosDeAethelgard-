@@ -723,16 +723,24 @@ class AudioEngine {
 
     // ── Hechizos ────────────────────────────────────────
 
-    elementKey(elId) {
+    /**
+     * Sonido de un elemento al cargarlo. also: los que ya estaban cargados, que suenan detrás y algo más
+     * bajo: así se oye, sin mirar, que hay más de uno (y cuáles).
+     */
+    elementKey(elId, also = []) {
         if (!this.ctx) return;
-        const k = this.kit, t = this.ctx.currentTime + 0.005, out = this.#ui;
-        if (elId === 'agua') k.tone(out, { t, f: [[0, 700], [0.05, 1300]], dur: 0.07, a: 0.003, r: 0.05, peak: 0.16 });
+        [elId, ...also].forEach((id, i) => this.#elementBlip(id, this.ctx.currentTime + 0.005 + i * 0.11, i ? 0.7 : 1));
+    }
+
+    #elementBlip(elId, t, g) {
+        const k = this.kit, out = this.#ui;
+        if (elId === 'agua') k.tone(out, { t, f: [[0, 700], [0.05, 1300]], dur: 0.07, a: 0.003, r: 0.05, peak: 0.16 * g });
         if (elId === 'fuego') {
-            k.noise(out, { t, color: 'crackle', dur: 0.1, a: 0.003, r: 0.06, peak: 0.45, filter: { type: 'highpass', f: 1500 } });
-            k.tone(out, { t, f: 440, type: 'triangle', dur: 0.08, a: 0.003, r: 0.06, peak: 0.08 });
+            k.noise(out, { t, color: 'crackle', dur: 0.1, a: 0.003, r: 0.06, peak: 0.45 * g, filter: { type: 'highpass', f: 1500 } });
+            k.tone(out, { t, f: 440, type: 'triangle', dur: 0.08, a: 0.003, r: 0.06, peak: 0.08 * g });
         }
-        if (elId === 'tierra') k.thump(out, { t, f0: 170, f1: 70, dur: 0.12, peak: 0.36 });
-        if (elId === 'viento') k.noise(out, { t, color: 'white', dur: 0.13, a: 0.02, r: 0.08, peak: 0.16, filter: { type: 'bandpass', f: [[0, 1000], [0.12, 3200]], q: 3 } });
+        if (elId === 'tierra') k.thump(out, { t, f0: 170, f1: 70, dur: 0.12, peak: 0.36 * g });
+        if (elId === 'viento') k.noise(out, { t, color: 'white', dur: 0.13, a: 0.02, r: 0.08, peak: 0.16 * g, filter: { type: 'bandpass', f: [[0, 1000], [0.12, 3200]], q: 3 } });
     }
 
     /** Sonido de un elemento en una posición (biblioteca, entrenamiento, Avatar). */
