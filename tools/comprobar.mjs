@@ -11,7 +11,7 @@
    · La narración se puede generar (todos los textos y personajes existen) y
      cuántos párrafos conservan su voz grabada.
    · La lógica del juego: hechizos, azar con semilla (duelos y desafío diario),
-     rachas, medallas y partidas guardadas.
+     rachas, medallas, velocidad de la historia, ajustes y partidas guardadas.
 
    Sale con error si algo falla. También lo lanza GitHub en cada rama
    (.github/workflows/comprobar.yml).
@@ -51,13 +51,17 @@ function igual(a, b, msg = '') {
     if (sa !== sb) throw new Error(`${msg ? msg + ': ' : ''}se esperaba ${sb} y salió ${sa}`);
 }
 function cierto(v, msg) { if (!v) throw new Error(msg || 'la condición no se cumple'); }
+async function pruebaLarga(nombre, fn) {
+    hechas++;
+    try { await fn(); console.log(`  ✔ ${nombre}`); } catch (e) { fallos.push(nombre); console.log(`  ✖ ${nombre}\n      ${e.message}`); }
+}
 
 // ═══════════════════════════════════════════════════════
 // 1. Versión y orden de los scripts
 // ═══════════════════════════════════════════════════════
 
 console.log('\nVersión y archivos');
-const G = cargarJuego(['config', 'data', 'lore', 'storage', 'audio', 'input', 'combat', 'cloud']);
+const G = cargarJuego(['config', 'data', 'lore', 'storage', 'audio', 'narrator', 'input', 'combat', 'cloud']);
 const html = leer('index.html');
 
 prueba('la versión es la misma en js/data.js y en todos los ?v= de index.html', () => {
@@ -262,6 +266,146 @@ prueba('existen los logros nuevos', () => {
     const ids = G.ACHIEVEMENTS_DEF.map(a => a.id);
     for (const id of ['daily3', 'daily7', 'daily30', 'gold10', 'oyente']) cierto(ids.includes(id), `falta el logro ${id}`);
     igual(new Set(ids).size, ids.length, 'hay logros repetidos');
+});
+
+console.log('\nVelocidad de la historia');
+const FRECUENCIA = 24000;
+const sonido = datos => ({ sampleRate: FRECUENCIA, length: datos.length, duration: datos.length / FRECUENCIA, getChannelData: () => datos });
+const audioFalso = { createBuffer: (canales, largo) => sonido(new Float32Array(largo)) };
+/** Una locución de mentira: segundos de voz (positivos) y de silencio (negativos). */
+function locucion(...tramos) {
+    const largos = tramos.map(s => Math.round(Math.abs(s) * FRECUENCIA));
+    const x = new Float32Array(largos.reduce((t, n) => t + n, 0));
+    let o = 0;
+    tramos.forEach((s, k) => {
+        if (s > 0) for (let i = o; i < o + largos[k]; i++) x[i] = 0.3 * Math.sin(2 * Math.PI * 140 * i / FRECUENCIA) + 0.12 * Math.sin(2 * Math.PI * 420 * i / FRECUENCIA + 1);
+        o += largos[k];
+    });
+    return sonido(x);
+}
+const VELOCIDADES = [0.55, 0.8, 1.35, 2];      // respecto a la grabación
+
+prueba('un audio sin pausas también llega a la velocidad pedida', () => {
+    const voz = locucion(3);
+    for (const f of VELOCIDADES) {
+        const real = voz.length / G.paceStretch(audioFalso, voz, f).length;
+        cierto(Math.abs(real / f - 1) < 0.03, `se pidió ${f} y ha salido ${real.toFixed(2)}`);
+    }
+});
+prueba('un audio con pausas llega a la velocidad pedida, y a la normal solo pierde los silencios largos', () => {
+    const voz = locucion(1.2, -0.3, 1.5, -0.9, 1);
+    const normal = G.paceStretch(audioFalso, voz, 1).length;
+    igual(normal, voz.length - 0.5 * FRECUENCIA, 'el silencio de 0,9 segundos debía quedarse en 0,4');
+    for (const f of VELOCIDADES) {
+        const real = normal / G.paceStretch(audioFalso, voz, f).length;
+        cierto(Math.abs(real / f - 1) < 0.04, `se pidió ${f} y ha salido ${real.toFixed(2)}`);
+    }
+});
+prueba('al recortar un silencio, las pausas que quedan son las del audio recortado', () => {
+    const voz = locucion(1, -0.9, 1, -0.2, 0.5);
+    const corto = G.trimPauses(audioFalso, voz, G.findPauses(voz), 400);
+    igual(corto.buffer.length, voz.length - 0.5 * FRECUENCIA);
+    igual(Array.from(corto.marks.pause), Array.from(G.findPauses(corto.buffer).pause));
+    const seguida = locucion(2);
+    cierto(G.trimPauses(audioFalso, seguida, G.findPauses(seguida)).buffer === seguida, 'sin silencios largos el audio no se toca');
+});
+prueba('la velocidad de la historia tiene unos límites y un valor por defecto únicos', () => {
+    const { min, max, def } = G.STORY_RATE;
+    igual(G.DEFAULT_SETTINGS.storyRate, def);
+    igual([G.storyRate({}), G.storyRate({ storyRate: 0.1 }), G.storyRate({ storyRate: 9 }), G.storyRate({ storyRate: 1.2 })], [def, min, max, 1.2]);
+    const opciones = leer('js/app.js').match(/id: 'storyRate',[^\n]*/)[0];
+    cierto(/min: STORY_RATE\.min, max: STORY_RATE\.max/.test(opciones), 'la opción «Velocidad de la historia» no usa STORY_RATE');
+});
+prueba('a la velocidad por defecto, la historia no cambia la velocidad de la voz del sistema', () => {
+    igual(G.storyVoiceRate({ storyRate: G.STORY_RATE.def, speechRate: 0.6 }), 1);
+    igual(G.storyVoiceRate({ storyRate: G.STORY_RATE.def, speechRate: 2.5 }), 1);
+    cierto(G.storyVoiceRate({ storyRate: G.STORY_RATE.max }) > 1 && G.storyVoiceRate({ storyRate: G.STORY_RATE.min }) < 1);
+});
+
+/** La voz del juego (js/speech.js) con un navegador de mentira y un reloj que se mueve a mano. */
+function vozDePrueba(ajustes) {
+    const dicho = [], region = { textContent: '' }, esperas = [];
+    let reloj = 0;
+    const quitar = e => { const i = esperas.indexOf(e); if (i >= 0) esperas.splice(i, 1); };
+    const ctx = vm.createContext({
+        clamp: G.clamp, ajustes,
+        window: { speechSynthesis: { paused: false, getVoices: () => [], cancel() { }, speak(u) { dicho.push(u); u.onend(); } } },
+        document: { getElementById: () => region },
+        SpeechSynthesisUtterance: function (text) { this.text = text; },
+        performance: { now: () => reloj },
+        setTimeout: (fn, ms = 0) => { const e = { fn, t: reloj + ms }; esperas.push(e); return e; },
+        setInterval: (fn, ms) => { const e = { fn, t: reloj + ms, cada: ms }; esperas.push(e); return e; },
+        clearTimeout: quitar, clearInterval: quitar,
+    });
+    vm.runInContext(leer('js/speech.js'), ctx, { filename: 'speech.js' });
+    const speech = vm.runInContext('new Speech(ajustes)', ctx);
+    /** Lanza algo que habla y devuelve los milisegundos que tarda en terminar. */
+    const tarda = async hablar => {
+        let hecho = false;
+        const t0 = reloj;
+        hablar(speech).then(() => { hecho = true; });
+        while (reloj - t0 < 600000) {
+            await new Promise(r => setImmediate(r));
+            if (hecho) break;
+            reloj += 50;
+            for (const e of [...esperas]) {
+                if (e.t > reloj || !esperas.includes(e)) continue;
+                if (e.cada) e.t += e.cada; else quitar(e);
+                e.fn();
+            }
+        }
+        return reloj - t0;
+    };
+    return { dicho, region, tarda };
+}
+
+await pruebaLarga('la voz del sistema lee la historia a la velocidad de voz del jugador', async () => {
+    const ajustes = { output: 'tts', speechRate: 0.6, speechVolume: 1, storyRate: G.STORY_RATE.def };
+    const voz = vozDePrueba(ajustes);
+    const velocidad = async () => {
+        await voz.tarda(s => s.narrate(['El Silencio se acerca.'], { rate: G.storyVoiceRate(ajustes) }));
+        return Math.round(voz.dicho[voz.dicho.length - 1].rate * 100) / 100;
+    };
+    igual(await velocidad(), 0.6, 'historia a la velocidad por defecto');
+    ajustes.storyRate = 2;
+    igual(await velocidad(), 0.8, 'historia a 2: un tercio más deprisa que la voz del jugador');
+    ajustes.speechRate = 2;
+    igual(await velocidad(), 2.67, 'quien tiene la voz rápida también oye rápida la historia');
+});
+await pruebaLarga('con lector de pantalla, la velocidad de la historia no acorta el tiempo de cada párrafo', async () => {
+    const parrafos = ['a'.repeat(280), 'b'.repeat(140)];
+    const tiempo = (storyRate, speechRate = 1) => {
+        const ajustes = { output: 'sr', speechRate, speechVolume: 1, storyRate };
+        const voz = vozDePrueba(ajustes);
+        return voz.tarda(s => s.narrate(parrafos, { rate: G.storyVoiceRate(ajustes) })).then(ms => {
+            igual(voz.region.textContent, parrafos[1], 'el último párrafo debe quedar en la región del lector');
+            return ms;
+        });
+    };
+    const normal = await tiempo(G.STORY_RATE.def);
+    cierto(normal >= 30000, `420 letras a 14 por segundo son 30 segundos, y solo se han dado ${normal / 1000}`);
+    igual(await tiempo(G.STORY_RATE.max), normal, 'historia a 2');
+    igual(await tiempo(G.STORY_RATE.min), normal, 'historia a 0,8');
+    cierto(await tiempo(G.STORY_RATE.def, 0.5) > normal * 1.8, 'con la voz más lenta debe dar más tiempo');
+});
+
+console.log('\nAjustes guardados');
+/** Carga los ajustes como si el navegador tuviera guardado ese objeto (o nada). */
+function ajustesCon(guardado) {
+    G.localStorage = { getItem: k => (guardado && k === G.Storage.SETTINGS ? JSON.stringify(guardado) : null) };
+    try { return G.Storage.loadSettings(); } finally { delete G.localStorage; }
+}
+prueba('sin nada guardado, los ajustes son los de fábrica', () => igual(ajustesCon(null), G.DEFAULT_SETTINGS));
+prueba('la velocidad de la historia antigua se pasa a la escala nueva', () => {
+    const antes = [0.7, 0.8, 1, 1.2, 1.5].map(v => ajustesCon({ storyRate: v, speechRate: 0.6 }));
+    igual(antes.map(s => s.storyRate), [1.1, 1.2, 1.5, 1.8, 2]);
+    cierto(antes.every(s => s.speechRate === 0.6 && s.settingsVersion === 2), 'no debía tocar la velocidad de voz');
+    igual(ajustesCon({ speechRate: 1.4 }).storyRate, 1.5, 'quien no la había tocado');
+    igual(ajustesCon({ storyRate: 'rápida' }).storyRate, 1.5, 'un valor ilegible');
+});
+prueba('la velocidad de la historia ya guardada en la escala nueva no se vuelve a convertir', () => {
+    igual([0.8, 1, 1.5, 2].map(v => ajustesCon({ storyRate: v, settingsVersion: 2 }).storyRate), [0.8, 1, 1.5, 2]);
+    igual(ajustesCon({ storyRate: 5, settingsVersion: 2 }).storyRate, 2);
 });
 
 console.log('\nPartidas guardadas');

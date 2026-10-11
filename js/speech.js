@@ -164,7 +164,8 @@ class Speech {
         this.onCaption?.(text);
         if (!this.useTTS) {
             this.#announceLive(text, assertive);
-            await this.#waitMs(this.estimate(text, rate), () => !valid());
+            // La velocidad la pone el lector de pantalla, no el juego: rate no acorta el tiempo que tiene para leerlo.
+            await this.#waitMs(this.estimate(text), () => !valid());
             return;
         }
         for (const chunk of splitSpeech(text)) {

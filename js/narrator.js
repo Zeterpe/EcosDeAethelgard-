@@ -38,11 +38,13 @@ function timeStretch(ctx, buffer, rate) {
     const tol = Math.round(sr * 0.012), L = Hs;
     const win = new Float32Array(N);
     for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N);
-    const out = new Float32Array(Math.ceil(input.length * 3.2) + 2 * N);   // las velocidades nunca bajan de 1/3
-    let prev = 0, pos = 0, k = 0;
-    for (;;) {
-        const nominal = Math.round(pos);
-        if (nominal + N + tol >= input.length) break;
+    // De dónde sale cada trozo: se calcula antes para que la salida ocupe lo justo.
+    const starts = [];
+    for (let pos = 0, at = 0; at + N + tol < input.length; pos += Hs * rateAt(at), at = Math.round(pos)) starts.push(at);
+    const out = new Float32Array(starts.length * Hs + N);
+    let prev = 0;
+    for (let k = 0; k < starts.length; k++) {
+        const nominal = starts[k];
         let best = nominal;
         let energy = 0;
         for (let j = 0; j < N; j += 16) energy += input[nominal + j] * input[nominal + j];
@@ -65,12 +67,9 @@ function timeStretch(ctx, buffer, rate) {
         const o = k * Hs;
         for (let i = 0; i < N; i++) out[o + i] += input[best + i] * win[i];
         prev = best;
-        k++;
-        pos += Hs * rateAt(nominal);
     }
-    const len = Math.max(1, k * Hs + N);
-    const res = ctx.createBuffer(1, len, sr);
-    res.getChannelData(0).set(out.subarray(0, len));
+    const res = ctx.createBuffer(1, out.length, sr);
+    res.getChannelData(0).set(out);
     return res;
 }
 
@@ -101,34 +100,36 @@ function findPauses(buffer) {
 /**
  * Recorta los silencios largos (Azure deja hasta un segundo entre frases)
  * a maxMs como mucho. Solo se quita aire: la voz no se toca.
+ * marks son las pausas del audio (findPauses). Devuelve el audio recortado y sus
+ * pausas, que salen de esas mismas marcas: no hace falta volver a buscarlas.
  */
-function trimPauses(ctx, buffer, maxMs = 400) {
+function trimPauses(ctx, buffer, marks, maxMs = 400) {
     const sr = buffer.sampleRate, x = buffer.getChannelData(0);
-    const { hop, n, pause } = findPauses(buffer);
-    const keep = Math.round(maxMs / 10), fade = Math.round(sr * 0.005);
-    const cuts = [];                                   // [desde, hasta) en muestras
+    const { hop, n, pause } = marks;
+    const keep = Math.max(1, Math.round(maxMs / 10)), fade = Math.round(sr * 0.005);
+    const cuts = [];                                   // [desde, hasta) en tramos de 10 ms
     for (let i = 0; i < n;) {
         if (!pause[i]) { i++; continue; }
         let j = i;
         while (j < n && pause[j]) j++;
-        if (j - i > keep) {
-            const a = (i + Math.floor(keep / 2)) * hop, b = Math.min(x.length, (j - Math.ceil(keep / 2)) * hop);
-            if (b > a) cuts.push([a, b]);
-        }
+        if (j - i > keep) cuts.push([i + Math.floor(keep / 2), j - Math.ceil(keep / 2)]);
         i = j;
     }
-    if (!cuts.length) return buffer;
+    if (!cuts.length) return { buffer, marks };
     const removed = cuts.reduce((t, [a, b]) => t + (b - a), 0);
-    const out = new Float32Array(x.length - removed);
+    const out = new Float32Array(x.length - removed * hop);
+    const left = new Uint8Array(n - removed);          // las pausas que quedan
     const joins = [];
     let o = 0, from = 0;
     for (const [a, b] of cuts) {
-        out.set(x.subarray(from, a), o);
+        out.set(x.subarray(from * hop, a * hop), o * hop);
+        left.set(pause.subarray(from, a), o);
         o += a - from;
-        joins.push(o);
+        joins.push(o * hop);
         from = b;
     }
-    out.set(x.subarray(from), o);
+    out.set(x.subarray(from * hop), o * hop);
+    left.set(pause.subarray(from), o);
     for (const j of joins) {                           // fundidos de 5 ms en cada corte (todo es silencio)
         for (let k = 0; k < fade; k++) {
             const g = k / fade;
@@ -138,7 +139,7 @@ function trimPauses(ctx, buffer, maxMs = 400) {
     }
     const res = ctx.createBuffer(1, out.length, sr);
     res.getChannelData(0).set(out);
-    return res;
+    return { buffer: res, marks: { hop, n: left.length, pause: left } };
 }
 
 /**
@@ -149,16 +150,17 @@ function trimPauses(ctx, buffer, maxMs = 400) {
  * f: velocidad respecto a la grabación (1 = tal cual, salvo los silencios largos).
  */
 function paceStretch(ctx, buffer, f) {
-    const base = trimPauses(ctx, buffer, 400);
-    if (Math.abs(f - 1) < 0.01) return base;
+    const marks = findPauses(buffer);                  // se buscan una sola vez por audio
+    let cut = trimPauses(ctx, buffer, marks, 400);
+    if (Math.abs(f - 1) < 0.01) return cut.buffer;
     if (f < 1) {
         // Para ir más despacio se dejan las pausas algo más largas (la duración final es la misma):
         // así la voz se estira menos.
-        const roomy = trimPauses(ctx, buffer, Math.round(400 / Math.sqrt(f)));
-        f *= roomy.length / base.length;
-        buffer = roomy;
-    } else buffer = base;
-    const { hop, n, pause } = findPauses(buffer);
+        const roomy = trimPauses(ctx, buffer, marks, Math.round(400 / Math.sqrt(f)));
+        f *= roomy.buffer.length / cut.buffer.length;
+        cut = roomy;
+    }
+    const { hop, n, pause } = cut.marks;
     let Ts = 0;
     for (let i = 0; i < n; i++) Ts += pause[i];
     const Tv = n - Ts, target = n / f;
@@ -169,7 +171,7 @@ function paceStretch(ctx, buffer, f) {
         fs = rest > 0 ? Ts / rest : 4;
         fs = clamp(fs, 1 / 3, 4);
         if (Tv > 0) { const r2 = target - Ts / fs; if (r2 > 0) fv = Tv / r2; }
-    }
+    } else fv = f;                                            // sin pausas, todo el cambio lo hace la voz
     fv = clamp(fv, 0.5, 2.2);
     const rate = new Float32Array(n);
     for (let i = 0; i < n; i++) {                            // suavizado de 70 ms para no dar saltos
@@ -177,7 +179,7 @@ function paceStretch(ctx, buffer, f) {
         for (let d = -3; d <= 3; d++) { const m = i + d; if (m >= 0 && m < n) { sum += pause[m] ? fs : fv; c++; } }
         rate[i] = sum / c;
     }
-    return timeStretch(ctx, buffer, sample => rate[Math.min(n - 1, Math.floor(sample / hop))]);
+    return timeStretch(ctx, cut.buffer, sample => rate[Math.min(n - 1, Math.floor(sample / hop))]);
 }
 
 class Narrator {
@@ -362,7 +364,7 @@ class Narrator {
     // ── Carga ───────────────────────────────────────────
 
     /** Velocidad de reproducción respecto a la grabación (1 = tal cual se grabó). */
-    #rate() { return Math.round((clamp(this.#settings.storyRate || 1.5, 0.8, 2) / this.nativeRate) * 20) / 20; }
+    #rate() { return Math.round((storyRate(this.#settings) / this.nativeRate) * 20) / 20; }
 
     #decode(data) {
         const ctx = this.#audio.ctx;
@@ -389,11 +391,12 @@ class Narrator {
     }
 
     #raw(file) {
-        return this.#cached(file, () => fetch(this.#url(file))
+        return fetch(this.#url(file))
             .then(r => { if (!r.ok) throw new Error(`No se pudo descargar ${file} (HTTP ${r.status})`); return r.arrayBuffer(); })
-            .then(data => this.#decode(data)));
+            .then(data => this.#decode(data));
     }
 
+    /** Solo se guarda el audio ya procesado: el original se suelta en cuanto está listo. */
     #bufferFor(file, rate = this.#rate()) {
         return this.#cached(`${file}@${rate}`, () => this.#raw(file).then(b => paceStretch(this.#audio.ctx, b, rate)));
     }
