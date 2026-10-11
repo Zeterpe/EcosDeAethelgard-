@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = {
     difficulty: 'invocador',
     verbosity: 'normal',      // completo · normal · breve · sonido
     verbosityPrev: 'normal',  // a qué volver al reactivar los anuncios con la tecla V
-    comboWindow: 1000,
+    comboWindow: 0,           // ms para sumar un elemento a otro pulsándolos seguidos (0: los dúos, solo a la vez)
     keyScheme: 'clasico',
     ticks: true,
     mono: false,
@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
     narrationHint: false,     // ya se ha explicado en voz alta cómo pasar y saltar narraciones
     gestures: true,           // gestos táctiles sobre el campo de batalla
     vibration: true,          // vibración al acertar y al recibir daño (móviles que la admiten)
-    settingsVersion: 2,
+    settingsVersion: 3,
 };
 
 const Storage = {
@@ -51,6 +51,13 @@ const Storage = {
         if ((raw.settingsVersion || 1) < 2) {
             s.storyRate = +raw.storyRate > 0 ? Math.round(+raw.storyRate * 15) / 10 : STORY_RATE.def;
             s.settingsVersion = 2;
+        }
+        // Versión 3: un dúo se forma solo al pulsar las dos teclas a la vez; pulsarlas seguidas pasa a ser una
+        // opción. Antes se sumaban durante un segundo por defecto, y salían dúos sin querer. Quien había
+        // ampliado ese tiempo (porque le cuesta pulsar dos teclas a la vez) lo conserva.
+        if ((raw.settingsVersion || 1) < 3) {
+            if (!(+raw.comboWindow > 1000)) s.comboWindow = 0;
+            s.settingsVersion = 3;
         }
         if (!DIFFICULTIES[s.difficulty]) s.difficulty = DEFAULT_SETTINGS.difficulty;
         if (!KEY_SCHEMES[s.keyScheme]) s.keyScheme = DEFAULT_SETTINGS.keyScheme;

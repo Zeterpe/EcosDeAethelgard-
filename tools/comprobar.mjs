@@ -430,7 +430,7 @@ await pruebaLarga('con lector de pantalla, la velocidad de la historia no acorta
 
 console.log('\nTeclas: cargar elementos y lanzar');
 /** El sistema de teclas con un reloj que se mueve a mano. Apunta lo que llega al juego. */
-function teclado(comboWindow = 1000) {
+function teclado(comboWindow = G.DEFAULT_SETTINGS.comboWindow) {
     const real = G.performance.now;
     let reloj = 1000;
     G.performance.now = () => reloj;
@@ -460,28 +460,29 @@ prueba('un elemento queda cargado hasta que se lanza, aunque pase el tiempo', ()
     igual(t.toca('ArrowLeft'), 'Agua left');
     igual(t.toca('ArrowLeft'), 'sin elemento left', 'al lanzar, el elemento se gasta');
 }));
-prueba('otro elemento pulsado más tarde sustituye al anterior; seguido, se suma (dúo)', () => conTeclado(t => {
-    t.toca('a'); t.espera(1500); t.toca('s');
-    igual(t.toca('ArrowUp'), 'Fuego up', 'pasada la ventana de combinación, sustituye');
-    t.toca('a'); t.espera(400); t.toca('f');
-    igual(t.toca('ArrowUp'), 'Tormenta de Hielo up', 'dentro de la ventana, se suman');
+prueba('un elemento y después otro: se queda solo el último, nunca un dúo', () => conTeclado(t => {
+    igual(G.DEFAULT_SETTINGS.comboWindow, 0, 'por defecto, los dúos son solo a la vez');
+    for (const pausa of [150, 300, 700, 1000, 3000]) {
+        t.toca('a'); t.espera(pausa); t.toca('s');
+        igual(t.input.armedNow(), ['fuego'], `A y, ${pausa} milisegundos después, S`);
+        igual(t.toca('ArrowUp'), 'Fuego up');
+    }
+    t.toca('a'); t.espera(200); t.toca('s'); t.espera(200); t.toca('d');
+    igual(t.toca('ArrowLeft'), 'Tierra left', 'tres seguidos: el último');
+}));
+prueba('un dúo es pulsar las dos teclas a la vez, y luego la flecha', () => conTeclado(t => {
     t.pulsa('s'); t.espera(30); t.pulsa('d'); t.espera(3000);
-    igual(t.toca('ArrowDown'), 'Lava Ardiente down', 'dos teclas mantenidas son un dúo, tarde lo que tarde la flecha');
-}));
-prueba('pulsar otra vez un elemento cargado lo deja solo (para corregir un error)', () => conTeclado(t => {
-    t.toca('a'); t.espera(300); t.toca('s');
-    igual(t.input.armedNow(), ['agua', 'fuego']);
-    t.espera(200); t.toca('s');
-    igual(t.input.armedNow(), ['fuego']);
-    igual(t.toca('ArrowRight'), 'Fuego right');
-}));
-prueba('al cargar se avisa de los elementos que ya estaban cargados, salvo en un acorde', () => conTeclado(t => {
-    t.toca('a'); t.espera(500);
-    igual(t.toca('s'), 'fuego+agua', 'debe sonar también el Agua, que ya estaba');
-    igual(t.toca('s'), 'fuego', 'al corregir suena solo el que queda');
-    t.toca('ArrowUp');
-    t.pulsa('a'); t.espera(40);
-    igual(t.pulsa('f'), 'viento', 'las dos teclas de un acorde suenan una vez cada una');
+    igual(t.toca('ArrowDown'), 'Lava Ardiente down', 'las dos mantenidas, tarde lo que tarde la flecha');
+    t.suelta('s'); t.suelta('d');
+    t.pulsa('a'); t.espera(40); t.pulsa('f'); t.espera(90); t.suelta('a'); t.suelta('f'); t.espera(2000);
+    igual(t.toca('ArrowUp'), 'Tormenta de Hielo up', 'pulsadas a la vez y soltadas antes de la flecha');
+    t.pulsa('a'); t.espera(1500); t.pulsa('f');
+    igual(t.toca('ArrowUp'), 'Tormenta de Hielo up', 'una mantenida y la otra más tarde: también están las dos pulsadas');
+    t.suelta('a'); t.suelta('f');
+    t.toca('a'); t.espera(60); t.toca('f');
+    igual(t.toca('ArrowRight'), 'Tormenta de Hielo right', 'un acorde rápido en el que un dedo se levanta antes');
+    t.pulsa('a'); t.pulsa('f'); t.suelta('a'); t.suelta('f'); t.espera(500); t.toca('d');
+    igual(t.toca('ArrowUp'), 'Tierra up', 'con un dúo cargado, otro elemento después lo sustituye');
 }));
 prueba('con el elemento mantenido se puede lanzar varias veces (los Gemelos)', () => conTeclado(t => {
     t.pulsa('f');
@@ -491,21 +492,54 @@ prueba('con el elemento mantenido se puede lanzar varias veces (los Gemelos)', (
     t.suelta('f');
     igual(t.toca('ArrowRight'), 'sin elemento right', 'al soltarlo ya no está cargado');
 }));
+prueba('quien lo activa en Opciones puede hacer los dúos con teclas seguidas', () => conTeclado(t => {
+    t.toca('a'); t.espera(400); t.toca('f');
+    igual(t.toca('ArrowUp'), 'Tormenta de Hielo up', 'dentro del tiempo elegido, se suman');
+    t.toca('a'); t.espera(1500); t.toca('s');
+    igual(t.toca('ArrowUp'), 'Fuego up', 'pasado ese tiempo, sustituye');
+    t.toca('a'); t.espera(300); t.toca('s');
+    igual(t.input.armedNow(), ['agua', 'fuego']);
+    t.espera(200); t.toca('s');
+    igual(t.input.armedNow(), ['fuego'], 'pulsar otra vez un elemento cargado lo deja solo');
+}, 1000));
+prueba('al cargar suenan también los elementos que ya estaban cargados, salvo en un acorde', () => {
+    conTeclado(t => {
+        t.pulsa('a'); t.espera(500);
+        igual(t.pulsa('s'), 'fuego+agua', 'con el Agua mantenida, debe sonar también');
+        t.suelta('a'); t.suelta('s'); t.toca('ArrowUp');
+        t.pulsa('a'); t.espera(40);
+        igual(t.pulsa('f'), 'viento', 'las dos teclas de un acorde suenan una vez cada una');
+        t.suelta('a'); t.suelta('f'); t.espera(400);
+        igual(t.toca('s'), 'fuego', 'al sustituir suena solo el que queda');
+    });
+    conTeclado(t => {
+        t.toca('a'); t.espera(500);
+        igual(t.toca('s'), 'fuego+agua', 'con teclas seguidas, el Agua sigue cargada y debe sonar');
+        igual(t.toca('s'), 'fuego');
+    }, 1000);
+});
 prueba('si la ventana pierde el foco, ninguna tecla se queda pulsada', () => conTeclado(t => {
     t.pulsa('d'); t.toca('ArrowUp');
     t.input.releaseAll();
     igual(t.input.armedNow(), []);
     igual(t.toca('ArrowUp'), 'sin elemento up');
 }));
-prueba('los toques en pantalla tienen al menos dos segundos y medio para formar un dúo', () => conTeclado(t => {
+prueba('en pantalla táctil, donde no se pueden pulsar dos a la vez, los toques seguidos forman el dúo', () => conTeclado(t => {
     t.input.armElement('agua', false, 2500); t.espera(2000); t.input.armElement('viento', false, 2500);
-    igual(t.input.armedNow(), ['agua', 'viento']);
+    igual(t.input.armedNow(), ['agua', 'viento'], 'gestos: dos segundos y medio');
     t.input.fireDirection('up');
     igual(t.visto[t.visto.length - 1], 'Tormenta de Hielo up');
     t.input.armElement('agua', false, 2500); t.espera(3000); t.input.armElement('viento', false, 2500);
     igual(t.input.armedNow(), ['viento'], 'pasado ese tiempo, el segundo toque sustituye al primero');
-}, 600));
-prueba('tres elementos siguen dando un hechizo inestable', () => conTeclado(t => {
+    t.input.fireDirection('up');
+    t.input.armElement('fuego', false, 1000); t.espera(600); t.input.armElement('tierra', false, 1000);
+    igual(t.input.armedNow(), ['fuego', 'tierra'], 'botones de la pantalla: un segundo');
+    t.espera(300); t.input.armElement('tierra', false, 1000);
+    igual(t.input.armedNow(), ['tierra'], 'tocar otra vez un elemento cargado lo deja solo');
+    const botones = leer('js/app.js').match(/if \(b\.dataset\.el\) input\.armElement\(([^)]*)\)/)[1];
+    igual(botones, 'b.dataset.el, false, 1000', 'los botones de la pantalla deben dar su propia ventana');
+}));
+prueba('tres elementos a la vez siguen dando un hechizo inestable', () => conTeclado(t => {
     t.pulsa('a'); t.pulsa('s'); t.pulsa('d');
     igual(t.toca('ArrowUp'), 'Hechizo inestable up');
 }));
@@ -520,13 +554,22 @@ prueba('sin nada guardado, los ajustes son los de fábrica', () => igual(ajustes
 prueba('la velocidad de la historia antigua se pasa a la escala nueva', () => {
     const antes = [0.7, 0.8, 1, 1.2, 1.5].map(v => ajustesCon({ storyRate: v, speechRate: 0.6 }));
     igual(antes.map(s => s.storyRate), [1.1, 1.2, 1.5, 1.8, 2]);
-    cierto(antes.every(s => s.speechRate === 0.6 && s.settingsVersion === 2), 'no debía tocar la velocidad de voz');
+    cierto(antes.every(s => s.speechRate === 0.6 && s.settingsVersion === G.DEFAULT_SETTINGS.settingsVersion), 'no debía tocar la velocidad de voz');
     igual(ajustesCon({ speechRate: 1.4 }).storyRate, 1.5, 'quien no la había tocado');
     igual(ajustesCon({ storyRate: 'rápida' }).storyRate, 1.5, 'un valor ilegible');
 });
 prueba('la velocidad de la historia ya guardada en la escala nueva no se vuelve a convertir', () => {
     igual([0.8, 1, 1.5, 2].map(v => ajustesCon({ storyRate: v, settingsVersion: 2 }).storyRate), [0.8, 1, 1.5, 2]);
     igual(ajustesCon({ storyRate: 5, settingsVersion: 2 }).storyRate, 2);
+});
+
+prueba('los dúos pasan a ser solo a la vez, salvo para quien había ampliado el tiempo', () => {
+    igual(ajustesCon(null).comboWindow, 0, 'partida nueva');
+    igual([600, 1000, 1500, 2500].map(v => ajustesCon({ comboWindow: v, settingsVersion: 2 }).comboWindow), [0, 0, 1500, 2500]);
+    igual(ajustesCon({ comboWindow: 1000 }).comboWindow, 0, 'ajustes más antiguos todavía');
+    igual(ajustesCon({ comboWindow: 1000, settingsVersion: 3 }).comboWindow, 1000, 'quien lo elige después en Opciones lo conserva');
+    const opcion = leer('js/app.js').match(/id: 'comboWindow',[^\n]*/)[0];
+    cierto(opcion.includes('values: [0, 1000, 1500, 2500]'), 'la opción debe ofrecer «solo a la vez» y los tiempos para teclas seguidas');
 });
 
 console.log('\nPartidas guardadas');

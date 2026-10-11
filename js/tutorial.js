@@ -243,7 +243,7 @@ class Tutorial {
                 if (!await this.#explain(gen, [
                     'Ya puedes lanzar hechizos. Pulsa la tecla del elemento y después la flecha hacia el enemigo. El elemento queda cargado hasta que lanzas.',
                     'Puedes mantener el elemento pulsado mientras pulsas la flecha, o soltarlo antes.',
-                    'Si te equivocas de elemento, pulsa el que querías. Cada vez oirás todos los que llevas cargados: si suenan dos y solo querías uno, pulsa otra vez ese y se quedará solo.',
+                    'Si te equivocas de elemento, pulsa el que querías: se queda el último que pulses.',
                 ])) return false;
                 const guided = [
                     { id: 'wolf_fire', dir: 'left', text: `Un Lobo de Fuego a tu izquierda. El Agua apaga el Fuego: pulsa ${k.spoken.agua} y luego ${k.spoken.left}.` },
@@ -265,7 +265,7 @@ class Tutorial {
             async () => {
                 if (!await this.#explain(gen, [
                     'Las criaturas élite están hechas de dos elementos, y son débiles justo a los otros dos.',
-                    'Para herirlas de verdad, combina sus dos debilidades: pulsa las dos teclas de elemento a la vez y después la flecha. Es un golpe crítico: quita dos vidas.',
+                    'Para herirlas de verdad, combina sus dos debilidades: pulsa las dos teclas de elemento a la vez y después la flecha. Tienen que estar pulsadas a la vez: una detrás de otra no vale. Es un golpe crítico: quita dos vidas.',
                 ])) return false;
                 const d1 = pick(DIR_IDS), d2 = pick(DIR_IDS), d3 = pick(DIR_IDS);
                 if (!await this.#spellExercise(gen, {

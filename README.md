@@ -17,7 +17,7 @@ Las criaturas del Silencio te atacan desde cuatro posiciones. Escucha su sonido,
 | **V** | Apagar o encender los anuncios de enemigos (solo sonido) |
 | **Escape** | Pausa (y saltar narraciones) |
 
-Pulsa el elemento y después la flecha. El elemento queda «cargado» hasta que lanzas el hechizo, así que puedes mantenerlo pulsado o soltarlo antes. Para un dúo, pulsa los dos a la vez (o uno detrás de otro, dentro de la ventana de combinación). Si te equivocas, pulsa el que querías: al cargar se oyen todos los elementos cargados, y pulsar otra vez uno lo deja solo. Hay un esquema para zurdos (J K L Ñ + W A S D) y botones táctiles en pantalla.
+Pulsa el elemento y después la flecha. El elemento queda «cargado» hasta que lanzas el hechizo, así que puedes mantenerlo pulsado o soltarlo antes. Para un dúo, pulsa las dos teclas de elemento a la vez; si pulsas una y después otra, se queda la última, así que para corregir basta con pulsar el elemento que querías. Quien no pueda pulsar dos teclas a la vez puede activar en Opciones los **dúos con teclas seguidas**. En pantalla táctil, donde no se pueden pulsar dos a la vez, los dos toques seguidos forman el dúo. Hay un esquema para zurdos (J K L Ñ + W A S D) y botones táctiles en pantalla.
 
 Durante una narración, **Enter** pasa al párrafo siguiente y **Escape** la salta entera (el juego lo dice en voz alta la primera vez).
 
@@ -82,7 +82,7 @@ Cada ruta guarda además una leyenda de su guardián y una escena antes del comb
 
 - Voz propia del juego o **modo lector de pantalla** (NVDA, JAWS, VoiceOver) mediante regiones `aria-live`; el campo de batalla usa `role="application"` para que las teclas lleguen al juego.
 - Menús navegables con flechas, lectura del elemento enfocado y sonidos de interfaz.
-- Dificultad (Aprendiz, Invocador, Archimago), velocidad, volumen y voz (y una velocidad aparte para la historia, de 0,8 a 2, que empieza en 1,5), nivel de detalle de los anuncios, ventana de combinación, **audio mono** (la voz anuncia siempre la posición), tic-tac de tiempo y radar visual opcional.
+- Dificultad (Aprendiz, Invocador, Archimago), velocidad, volumen y voz (y una velocidad aparte para la historia, de 0,8 a 2, que empieza en 1,5), nivel de detalle de los anuncios, dúos con teclas seguidas (para quien no puede pulsar dos a la vez), **audio mono** (la voz anuncia siempre la posición), tic-tac de tiempo y radar visual opcional.
 - Subtítulos de todo lo que se dice, alto contraste, textos grandes y respeto de `prefers-reduced-motion`.
 
 ## Técnica
