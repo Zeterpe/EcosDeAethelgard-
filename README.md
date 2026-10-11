@@ -17,7 +17,7 @@ Las criaturas del Silencio te atacan desde cuatro posiciones. Escucha su sonido,
 | **V** | Apagar o encender los anuncios de enemigos (solo sonido) |
 | **Escape** | Pausa (y saltar narraciones) |
 
-Pulsa el elemento y, enseguida, la flecha. El elemento queda «cargado» durante la ventana de combinación, así que puedes mantenerlo o soltarlo justo antes. Hay un esquema para zurdos (J K L Ñ + W A S D) y botones táctiles en pantalla.
+Pulsa el elemento y después la flecha. El elemento queda «cargado» hasta que lanzas el hechizo, así que puedes mantenerlo pulsado o soltarlo antes. Para un dúo, pulsa los dos a la vez (o uno detrás de otro, dentro de la ventana de combinación). Si te equivocas, pulsa el que querías: al cargar se oyen todos los elementos cargados, y pulsar otra vez uno lo deja solo. Hay un esquema para zurdos (J K L Ñ + W A S D) y botones táctiles en pantalla.
 
 Durante una narración, **Enter** pasa al párrafo siguiente y **Escape** la salta entera (el juego lo dice en voz alta la primera vez).
 
@@ -58,11 +58,11 @@ Para generarlos: **[CONFIGURAR_VOCES.md](CONFIGURAR_VOCES.md)** (crear el recurs
 
 ## Criaturas raras
 
-A partir del nivel 13 aparecen tres criaturas que piden escuchar de otra manera (la voz no dice por dónde vienen, salvo en Aprendiz y con audio mono):
+A partir del nivel 22 aparecen, de una en una, tres criaturas que piden escuchar de otra manera (la voz no dice por dónde vienen, salvo en Aprendiz y con audio mono):
 
-- **Fuego Errante** (nivel 13): se mueve antes de atacar; apunta a donde termina su llama.
-- **Gemelos de Piedra** (nivel 17): suenan a la vez en dos posiciones; hay que alcanzar a los dos, uno detrás de otro, en el mismo turno.
-- **Susurro de Bruma** (nivel 22): suena muy bajo y una sola vez.
+- **Fuego Errante** (nivel 22): se mueve antes de atacar; apunta a donde termina su llama.
+- **Gemelos de Piedra** (nivel 24): suenan a la vez en dos posiciones; hay que alcanzar a los dos, uno detrás de otro, en el mismo turno.
+- **Susurro de Bruma** (nivel 26): suena muy bajo y una sola vez.
 
 También salen en las rutas, en la Arena desde la oleada 8 y, una vez conocidas, en la Práctica libre. Sus textos nuevos se leen con la voz del sistema hasta que se vuelva a lanzar **Generar narración**.
 

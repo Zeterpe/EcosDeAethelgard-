@@ -31,7 +31,7 @@ class Tutorial {
         const input = this.#d.input;
         input.reset();
         input.handler = {
-            onElement: el => { this.#d.audio.elementKey(el); this.#emit({ type: 'element', id: el }); },
+            onElement: (el, also) => { this.#d.audio.elementKey(el, also); this.#emit({ type: 'element', id: el }); },
             onSpell: s => this.#emit({ type: 'spell', spell: s }),
             onAim: d => this.#emit({ type: 'aim', dir: d }),
             onCommand: c => this.#emit({ type: 'command', id: c }),
@@ -241,8 +241,9 @@ class Tutorial {
             // 5. Hechizos simples
             async () => {
                 if (!await this.#explain(gen, [
-                    'Ya puedes lanzar hechizos. Pulsa la tecla del elemento y, enseguida, la flecha hacia el enemigo.',
-                    'Puedes mantener el elemento pulsado mientras pulsas la flecha, o soltarlo justo antes.',
+                    'Ya puedes lanzar hechizos. Pulsa la tecla del elemento y después la flecha hacia el enemigo. El elemento queda cargado hasta que lanzas.',
+                    'Puedes mantener el elemento pulsado mientras pulsas la flecha, o soltarlo antes.',
+                    'Si te equivocas de elemento, pulsa el que querías. Cada vez oirás todos los que llevas cargados: si suenan dos y solo querías uno, pulsa otra vez ese y se quedará solo.',
                 ])) return false;
                 const guided = [
                     { id: 'wolf_fire', dir: 'left', text: `Un Lobo de Fuego a tu izquierda. El Agua apaga el Fuego: pulsa ${k.spoken.agua} y luego ${k.spoken.left}.` },
@@ -263,18 +264,24 @@ class Tutorial {
             // 6. Dúos
             async () => {
                 if (!await this.#explain(gen, [
-                    'Las criaturas élite tienen dos elementos y dos debilidades.',
+                    'Las criaturas élite están hechas de dos elementos, y son débiles justo a los otros dos.',
                     'Para herirlas de verdad, combina sus dos debilidades: pulsa las dos teclas de elemento a la vez y después la flecha. Es un golpe crítico: quita dos vidas.',
                 ])) return false;
-                const d1 = pick(DIR_IDS), d2 = pick(DIR_IDS);
+                const d1 = pick(DIR_IDS), d2 = pick(DIR_IDS), d3 = pick(DIR_IDS);
                 if (!await this.#spellExercise(gen, {
                     id: 'magma_elem', dir: d1,
-                    text: `Un Elemental de Magma, de Fuego y Tierra, ${DIRECTIONS[d1].name}. Es débil al Agua y al Viento. Lanza la Tormenta de Hielo: ${k.spoken.agua} y ${k.spoken.viento} a la vez, y luego ${k.spoken[d1]}.`,
+                    text: `Un Elemental de Magma, de Fuego y Tierra, ${DIRECTIONS[d1].name}. Es débil a los otros dos: Agua y Viento. Lanza la Tormenta de Hielo: ${k.spoken.agua} y ${k.spoken.viento} a la vez, y luego ${k.spoken[d1]}.`,
                     requireCrit: true,
                 })) return false;
-                return this.#spellExercise(gen, {
+                if (!await this.#spellExercise(gen, {
                     id: 'storm_spec', dir: d2,
-                    text: `Un Espectro Tormenta, de Agua y Viento, ${DIRECTIONS[d2].name}. La Tierra vence al Agua y el Fuego vence al Viento. ¿Qué dúo usarás?`,
+                    text: `Un Espectro Tormenta, de Agua y Viento, ${DIRECTIONS[d2].name}. Es débil a los otros dos elementos. ¿Qué dúo usarás?`,
+                    requireCrit: true,
+                })) return false;
+                // Con el Ent el ciclo no sirve (la Tierra vence al Agua, y es de las dos): la regla de «los otros dos», sí.
+                return this.#spellExercise(gen, {
+                    id: 'ent_forest', dir: d3,
+                    text: `Uno más. Un Ent del Bosque, de Tierra y Agua, ${DIRECTIONS[d3].name}. No uses ni Tierra ni Agua: lo curarías. ¿Cuáles son los otros dos?`,
                     requireCrit: true,
                 });
             },
@@ -323,7 +330,7 @@ class Tutorial {
             text, target: dir, expect: { kind: 'spell', elements: best, dir },
             play: () => a.playVoice(def.voice, dir),
             accept: evt => {
-                if (evt.type === 'aim') return { ok: false, msg: 'Falta el elemento. Pulsa primero la tecla del elemento y, enseguida, la flecha.' };
+                if (evt.type === 'aim') return { ok: false, msg: 'Falta el elemento. Pulsa primero la tecla del elemento y después la flecha.' };
                 if (evt.type !== 'spell') return null;
                 const s = evt.spell;
                 a.castSpell(s.elements, s.dir);
