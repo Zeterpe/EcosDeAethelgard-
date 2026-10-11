@@ -11,7 +11,7 @@
    · La narración se puede generar (todos los textos y personajes existen) y
      cuántos párrafos conservan su voz grabada.
    · La lógica del juego: hechizos, azar con semilla (duelos y desafío diario),
-     rachas, medallas, velocidad de la historia, ajustes y partidas guardadas.
+     rachas, medallas, teclas, velocidad de la historia, ajustes y partidas guardadas.
 
    Sale con error si algo falla. También lo lanza GitHub en cada rama
    (.github/workflows/comprobar.yml).
@@ -172,9 +172,48 @@ prueba('las criaturas raras tienen consejo, historia y narración prevista', () 
         cierto(G.BESTIARY_ORDER.includes(id), `${id}: no está en el bestiario`);
     }
 });
-prueba('las raras no aparecen antes del nivel 13 y cada nivel anuncia los enemigos que tiene', () => {
-    for (let n = 1; n <= 12; n++) cierto(!G.CAMPAIGN[n].pool.some(id => G.ENEMIES[id].tier === 'rare'), `el nivel ${n} tiene una criatura rara`);
-    cierto(G.CAMPAIGN[13].pool.includes('wisp_fire') && G.CAMPAIGN[17].pool.includes('twins_earth') && G.CAMPAIGN[22].pool.includes('hush_water'));
+/** Nivel de la historia en el que aparece por primera vez cada criatura. */
+function estrenos() {
+    const vistos = new Set(), nivel = {};
+    for (let n = 1; n <= G.COMMON_LEVELS; n++) {
+        for (const id of G.CAMPAIGN[n].pool) if (!vistos.has(id)) { vistos.add(id); nivel[id] = n; }
+    }
+    return nivel;
+}
+prueba('las criaturas nuevas llegan de una en una, con un nivel de respiro y nunca en Frenesí, Niebla o con la Sombra', () => {
+    const nivel = estrenos();
+    igual(nivel, {
+        wolf_fire: 1, frog_water: 2, bat_wind: 3, golem_earth: 4,
+        magma_elem: 10, storm_spec: 12, ent_forest: 16, djinn_desert: 19,
+        wisp_fire: 22, twins_earth: 24, hush_water: 26,
+    });
+    const niveles = Object.values(nivel);
+    igual(new Set(niveles).size, niveles.length, 'dos criaturas se estrenan en el mismo nivel');
+    for (const [id, n] of Object.entries(nivel)) {
+        const def = G.CAMPAIGN[n];
+        cierto(!def.modifier && !def.miniboss, `${id} se estrena en el nivel ${n}, que es un nivel especial`);
+        if (n >= 10) cierto(!niveles.includes(n + 1), `tras el estreno de ${id} en el nivel ${n} no hay un nivel sin novedades`);
+    }
+});
+prueba('la Sombra y el nivel Élite solo usan criaturas que ya se conocen', () => {
+    const nivel = estrenos();
+    for (let n = 1; n <= G.COMMON_LEVELS; n++) {
+        const def = G.CAMPAIGN[n];
+        for (const id of [...def.pool, ...(def.miniboss?.mimic || [])]) cierto(nivel[id] <= n, `el nivel ${n} usa ${id} antes de presentarlo`);
+    }
+});
+prueba('toda élite es débil a los dos elementos que no tiene, y así se lo explica al jugador', () => {
+    for (const id of G.ELITES) {
+        const e = G.ENEMIES[id], otros = G.ELEMENT_IDS.filter(el => !e.elements.includes(el));
+        igual([...e.weak].sort(), [...otros].sort(), `${id}: debilidades`);
+        igual([...e.cure].sort(), [...e.elements].sort(), `${id}: lo que la cura`);
+        igual(G.dualByName(e.critHit).key, G.spellKey(otros), `${id}: crítico`);
+        igual(G.dualByName(e.critCure).key, G.spellKey(e.elements), `${id}: curación crítica`);
+        const texto = G.STORY_LINES.meetWeak(e);
+        cierto(texto.includes(`Está hecha de ${G.elementNames(e.elements)}`) && texto.includes(`los otros dos elementos: ${G.elementNames(e.weak)}`) && texto.includes(e.critHit), `${id}: ${texto}`);
+        for (const el of e.elements) cierto(texto.includes(`ni ${G.ELEMENTS[el].name}`), `${id}: no avisa de que ${el} la cura`);
+    }
+    igual(G.STORY_LINES.meetWeak(G.ENEMIES.wolf_fire), 'Débil a Agua. Nunca uses Fuego: la curarías. Escucha otra vez.', 'las criaturas de un elemento conservan su texto (y su voz grabada)');
 });
 prueba('una oleada sin criaturas raras sale igual que antes de añadirlas', () => {
     const bolsa = rare => { G.GameRandom.seed('raras'); const b = G.buildBag({ count: 12, pool: G.ALL_COMMON, elite: 0.3, rare }).map(i => i.def.id); G.GameRandom.clear(); return b; };
@@ -388,6 +427,88 @@ await pruebaLarga('con lector de pantalla, la velocidad de la historia no acorta
     igual(await tiempo(G.STORY_RATE.min), normal, 'historia a 0,8');
     cierto(await tiempo(G.STORY_RATE.def, 0.5) > normal * 1.8, 'con la voz más lenta debe dar más tiempo');
 });
+
+console.log('\nTeclas: cargar elementos y lanzar');
+/** El sistema de teclas con un reloj que se mueve a mano. Apunta lo que llega al juego. */
+function teclado(comboWindow = 1000) {
+    const real = G.performance.now;
+    let reloj = 1000;
+    G.performance.now = () => reloj;
+    G.ajustesTeclas = { keyScheme: 'clasico', comboWindow };
+    const input = vm.runInContext('new InputSystem(ajustesTeclas)', G);
+    const visto = [];
+    input.handler = {
+        onElement: (el, antes) => visto.push(antes.length ? `${el}+${antes.join('+')}` : el),
+        onSpell: s => visto.push(`${s.name} ${s.dir}`),
+        onAim: d => visto.push(`sin elemento ${d}`),
+    };
+    const tecla = key => ({ key, preventDefault() { } });
+    return {
+        input, visto,
+        pulsa: key => { input.keydown(tecla(key)); return visto[visto.length - 1]; },
+        suelta: key => input.keyup(tecla(key)),
+        toca: key => { input.keydown(tecla(key)); input.keyup(tecla(key)); return visto[visto.length - 1]; },
+        espera: ms => { reloj += ms; },
+        fin: () => { G.performance.now = real; },
+    };
+}
+function conTeclado(fn, comboWindow) { const t = teclado(comboWindow); try { fn(t); } finally { t.fin(); } }
+
+prueba('un elemento queda cargado hasta que se lanza, aunque pase el tiempo', () => conTeclado(t => {
+    t.toca('a'); t.espera(6000);
+    igual(t.input.armedNow(), ['agua']);
+    igual(t.toca('ArrowLeft'), 'Agua left');
+    igual(t.toca('ArrowLeft'), 'sin elemento left', 'al lanzar, el elemento se gasta');
+}));
+prueba('otro elemento pulsado más tarde sustituye al anterior; seguido, se suma (dúo)', () => conTeclado(t => {
+    t.toca('a'); t.espera(1500); t.toca('s');
+    igual(t.toca('ArrowUp'), 'Fuego up', 'pasada la ventana de combinación, sustituye');
+    t.toca('a'); t.espera(400); t.toca('f');
+    igual(t.toca('ArrowUp'), 'Tormenta de Hielo up', 'dentro de la ventana, se suman');
+    t.pulsa('s'); t.espera(30); t.pulsa('d'); t.espera(3000);
+    igual(t.toca('ArrowDown'), 'Lava Ardiente down', 'dos teclas mantenidas son un dúo, tarde lo que tarde la flecha');
+}));
+prueba('pulsar otra vez un elemento cargado lo deja solo (para corregir un error)', () => conTeclado(t => {
+    t.toca('a'); t.espera(300); t.toca('s');
+    igual(t.input.armedNow(), ['agua', 'fuego']);
+    t.espera(200); t.toca('s');
+    igual(t.input.armedNow(), ['fuego']);
+    igual(t.toca('ArrowRight'), 'Fuego right');
+}));
+prueba('al cargar se avisa de los elementos que ya estaban cargados, salvo en un acorde', () => conTeclado(t => {
+    t.toca('a'); t.espera(500);
+    igual(t.toca('s'), 'fuego+agua', 'debe sonar también el Agua, que ya estaba');
+    igual(t.toca('s'), 'fuego', 'al corregir suena solo el que queda');
+    t.toca('ArrowUp');
+    t.pulsa('a'); t.espera(40);
+    igual(t.pulsa('f'), 'viento', 'las dos teclas de un acorde suenan una vez cada una');
+}));
+prueba('con el elemento mantenido se puede lanzar varias veces (los Gemelos)', () => conTeclado(t => {
+    t.pulsa('f');
+    igual(t.toca('ArrowLeft'), 'Viento left');
+    t.espera(700);
+    igual(t.toca('ArrowRight'), 'Viento right');
+    t.suelta('f');
+    igual(t.toca('ArrowRight'), 'sin elemento right', 'al soltarlo ya no está cargado');
+}));
+prueba('si la ventana pierde el foco, ninguna tecla se queda pulsada', () => conTeclado(t => {
+    t.pulsa('d'); t.toca('ArrowUp');
+    t.input.releaseAll();
+    igual(t.input.armedNow(), []);
+    igual(t.toca('ArrowUp'), 'sin elemento up');
+}));
+prueba('los toques en pantalla tienen al menos dos segundos y medio para formar un dúo', () => conTeclado(t => {
+    t.input.armElement('agua', false, 2500); t.espera(2000); t.input.armElement('viento', false, 2500);
+    igual(t.input.armedNow(), ['agua', 'viento']);
+    t.input.fireDirection('up');
+    igual(t.visto[t.visto.length - 1], 'Tormenta de Hielo up');
+    t.input.armElement('agua', false, 2500); t.espera(3000); t.input.armElement('viento', false, 2500);
+    igual(t.input.armedNow(), ['viento'], 'pasado ese tiempo, el segundo toque sustituye al primero');
+}, 600));
+prueba('tres elementos siguen dando un hechizo inestable', () => conTeclado(t => {
+    t.pulsa('a'); t.pulsa('s'); t.pulsa('d');
+    igual(t.toca('ArrowUp'), 'Hechizo inestable up');
+}));
 
 console.log('\nAjustes guardados');
 /** Carga los ajustes como si el navegador tuviera guardado ese objeto (o nada). */

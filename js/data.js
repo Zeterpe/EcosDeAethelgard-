@@ -6,7 +6,7 @@
 'use strict';
 
 /** Versión del juego. Al publicar cambios, súbela también en los ?v= de index.html. */
-const GAME_VERSION = { id: '20261011a', spoken: '11 de octubre de 2026' };
+const GAME_VERSION = { id: '20261011b', spoken: '11 de octubre de 2026' };
 
 // ═══════════════════════════════════════════════════════
 // Elementos y ciclo elemental
@@ -142,7 +142,7 @@ const ENEMIES = {
         voice: 'djinn', icon: '🧞',
         desc: 'Campanillas místicas sobre un remolino de arena. Viento y Tierra entrelazados.',
     },
-    // Criaturas raras: cada una pide escuchar de otra manera (aparecen a partir del nivel 13).
+    // Criaturas raras: cada una pide escuchar de otra manera (aparecen a partir del nivel 22).
     wisp_fire: {
         id: 'wisp_fire', name: 'Fuego Errante', short: 'Errante', tier: 'rare', lives: 1,
         elements: ['fuego'], weak: ['agua'], cure: ['fuego'], critHit: null, critCure: null,
@@ -214,7 +214,13 @@ const ALL_COMMON = [...BASICS, ...ELITES];
 const SPECIALS = ['wisp_fire', 'twins_earth', 'hush_water'];   // criaturas raras
 const GUARDIANS = ['boss_fire', 'boss_water', 'boss_wind', 'boss_earth'];
 const BESTIARY_ORDER = [...BASICS, ...ELITES, ...SPECIALS, 'ember', 'shadow', ...GUARDIANS, 'final_boss'];
-// Las raras se van sumando a la historia: el Errante en el nivel 13, los Gemelos en el 17 y el Susurro en el 22.
+// Las criaturas nuevas llegan a la historia de una en una, y entre una y otra hay al menos un nivel sin
+// novedades para acostumbrarse (nunca llegan en un nivel de Frenesí o de Niebla). Primero las élite: el Magma
+// en el nivel 10, el Espectro en el 12, el Ent en el 16 y el Djinn en el 19. Después las raras: el Errante
+// en el 22, los Gemelos en el 24 y el Susurro en el 26.
+const POOL_MAGMA = [...BASICS, 'magma_elem'];
+const POOL_ESPECTRO = [...POOL_MAGMA, 'storm_spec'];
+const POOL_ENT = [...POOL_ESPECTRO, 'ent_forest'];
 const POOL_ERRANTE = [...ALL_COMMON, 'wisp_fire'];
 const POOL_GEMELOS = [...POOL_ERRANTE, 'twins_earth'];
 const POOL_RARAS = [...ALL_COMMON, ...SPECIALS];
@@ -279,21 +285,21 @@ const CAMPAIGN = [
     /* 7 */ { count: 8, react: 4700, pool: BASICS, modifier: 'frenzy' },
     /* 8 */ { count: 8, react: 4500, pool: BASICS },
     /* 9 */ { count: 9, react: 4300, pool: BASICS },
-    /* 10 */ { count: 8, react: 4400, pool: [...BASICS, 'magma_elem'], elite: 0.3 },
-    /* 11 */ { count: 9, react: 4200, pool: [...BASICS, 'magma_elem', 'storm_spec'], elite: 0.25 },
-    /* 12 */ { count: 9, react: 4100, pool: [...BASICS, 'magma_elem', 'storm_spec', 'ent_forest'], elite: 0.25 },
-    /* 13 */ { count: 10, react: 4000, pool: POOL_ERRANTE, elite: 0.25 },
-    /* 14 */ { count: 10, react: 3900, pool: POOL_ERRANTE, elite: 0.25, modifier: 'frenzy' },
+    /* 10 */ { count: 8, react: 4400, pool: POOL_MAGMA, elite: 0.3 },
+    /* 11 */ { count: 9, react: 4200, pool: POOL_MAGMA, elite: 0.25 },
+    /* 12 */ { count: 9, react: 4100, pool: POOL_ESPECTRO, elite: 0.25 },
+    /* 13 */ { count: 10, react: 4000, pool: POOL_ESPECTRO, elite: 0.25 },
+    /* 14 */ { count: 10, react: 3900, pool: POOL_ESPECTRO, elite: 0.25, modifier: 'frenzy' },
     /* 15 */ { count: 4, react: 3900, pool: BASICS, miniboss: { lives: 6, mimic: BASICS } },
-    /* 16 */ { count: 11, react: 3700, pool: POOL_ERRANTE, elite: 0.3 },
-    /* 17 */ { count: 11, react: 3600, pool: POOL_GEMELOS, elite: 0.3 },
-    /* 18 */ { count: 10, react: 3700, pool: POOL_GEMELOS, elite: 0.3, modifier: 'fog' },
-    /* 19 */ { count: 12, react: 3450, pool: POOL_GEMELOS, elite: 0.32 },
-    /* 20 */ { count: 12, react: 3400, pool: POOL_GEMELOS, elite: 0.33 },
-    /* 21 */ { count: 12, react: 3300, pool: POOL_GEMELOS, elite: 0.35, modifier: 'frenzy' },
-    /* 22 */ { count: 12, react: 3250, pool: POOL_RARAS, elite: 0.35 },
-    /* 23 */ { count: 12, react: 3350, pool: POOL_RARAS, elite: 0.36, modifier: 'fog' },
-    /* 24 */ { count: 13, react: 3150, pool: POOL_RARAS, elite: 0.38 },
+    /* 16 */ { count: 11, react: 3700, pool: POOL_ENT, elite: 0.3 },
+    /* 17 */ { count: 11, react: 3600, pool: POOL_ENT, elite: 0.3 },
+    /* 18 */ { count: 10, react: 3700, pool: POOL_ENT, elite: 0.3, modifier: 'fog' },
+    /* 19 */ { count: 12, react: 3450, pool: ALL_COMMON, elite: 0.32 },
+    /* 20 */ { count: 12, react: 3400, pool: ALL_COMMON, elite: 0.33 },
+    /* 21 */ { count: 12, react: 3300, pool: ALL_COMMON, elite: 0.35, modifier: 'frenzy' },
+    /* 22 */ { count: 12, react: 3250, pool: POOL_ERRANTE, elite: 0.35 },
+    /* 23 */ { count: 12, react: 3350, pool: POOL_ERRANTE, elite: 0.36, modifier: 'fog' },
+    /* 24 */ { count: 13, react: 3150, pool: POOL_GEMELOS, elite: 0.38 },
     /* 25 */ { count: 5, react: 3200, pool: ALL_COMMON, elite: 0.3, miniboss: { lives: 8, mimic: ALL_COMMON } },
     /* 26 */ { count: 14, react: 3050, pool: POOL_RARAS, elite: 0.4 },
     /* 27 */ { count: 8, react: 3200, pool: ELITES, modifier: 'elite' },
@@ -484,6 +490,8 @@ function joinY(list) {
     return `${list.slice(0, -1).join(', ')} ${y} ${last}`;
 }
 function elementNames(ids) { return joinY(ids.map(id => ELEMENTS[id].name)); }
+/** Lo que no hay que usar: «Fuego», o «ni Tierra ni Agua» (ninguno de los dos, ni juntos ni por separado). */
+function neverNames(ids) { return ids.length > 1 ? ids.map(id => `ni ${ELEMENTS[id].name}`).join(' ') : elementNames(ids); }
 function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -548,7 +556,15 @@ const STORY_LINES = {
         return `Ruta de ${R.name}, nivel ${n} de ${ROUTE_LEVELS}. ${mod ? `${mod.name}: ${mod.desc} ` : ''}${plural(def.count, 'enemigo', 'enemigos')}.`;
     },
     meetName(def) { return `¡Nueva criatura! ${def.name}. ${def.desc} Escucha.`; },
-    meetWeak(def) { return `${weaknessText(def)} Nunca uses ${elementNames(def.cure)}: la curarías. Escucha otra vez.`; },
+    meetWeak(def) {
+        // Las élite son débiles justo a los dos elementos de los que no están hechas: dicho así se recuerda
+        // mejor que con el ciclo, que con el Ent y el Djinn no sirve (uno de sus elementos vence al otro).
+        if (def.elements.length === 2) {
+            return `Está hecha de ${elementNames(def.elements)}, así que es débil a los otros dos elementos: ${elementNames(def.weak)}. ` +
+                `Los dos a la vez son un golpe crítico: ${def.critHit}. Nunca uses ${neverNames(def.cure)}: la curarías. Escucha otra vez.`;
+        }
+        return `${weaknessText(def)} Nunca uses ${elementNames(def.cure)}: la curarías. Escucha otra vez.`;
+    },
     /** Criaturas raras: cómo hay que escucharlas. */
     meetTip(def) { return `${def.tip} Así sonará en combate.`; },
 };

@@ -1271,8 +1271,9 @@ const LORE_EXTRA = {
         `El Agua apaga el Fuego. El Fuego doma el Viento. El Viento mueve la Tierra. Y la Tierra detiene el Agua.`,
         `Una criatura de Fuego es débil al Agua. Una de Viento, al Fuego. Una de Tierra, al Viento. Y una de Agua, a la Tierra.`,
         `Nunca ataques a una criatura con su propio elemento: la curarías y te devolvería el golpe.`,
-        `Las criaturas élite tienen dos elementos y dos debilidades. ` +
-        `Si combinas sus dos debilidades en un dúo, el golpe es crítico y les quita dos vidas.`,
+        `Las criaturas élite están hechas de dos elementos, y son débiles a los otros dos. ` +
+        `Si combinas esas dos debilidades en un dúo, el golpe es crítico y les quita dos vidas. ` +
+        `Y nunca uses ninguno de sus dos elementos: las curarías.`,
         `Los guardianes tienen un solo elemento. Su golpe crítico es el dúo de su debilidad con el elemento neutral, ` +
         `el que ni lo vence ni es vencido por él.`,
     ],

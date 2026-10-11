@@ -318,7 +318,7 @@ class CombatEngine {
         const input = this.#d.input;
         input.reset();
         input.handler = {
-            onElement: el => this.#onElement(el),
+            onElement: (el, also) => this.#onElement(el, also),
             onSpell: s => this.#onSpell(s),
             onAim: d => this.#onAim(d),
             onCommand: c => this.#onCommand(c),
@@ -617,9 +617,9 @@ class CombatEngine {
 
     // ── Entrada ─────────────────────────────────────────
 
-    #onElement(el) {
+    #onElement(el, also) {
         if (this.#paused) return;
-        this.#d.audio.elementKey(el);
+        this.#d.audio.elementKey(el, also);
     }
 
     #onAim() {
