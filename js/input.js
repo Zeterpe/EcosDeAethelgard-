@@ -2,9 +2,9 @@
    ECOS DE AETHELGARD — input.js
    Teclas de elemento + flecha = hechizo.
    Un elemento queda «cargado» hasta que se lanza,
-   aunque se suelte la tecla. Para un dúo se pulsan
-   los dos a la vez o seguidos, dentro de la ventana
-   de combinación.
+   aunque se suelte la tecla. Un dúo es pulsar dos
+   teclas de elemento a la vez: si se pulsa una y
+   después otra, se queda la última.
    ============================================= */
 'use strict';
 
@@ -39,6 +39,9 @@ function evaluateSpell(spell, profile) {
     if (profile.cure.includes(e)) return { type: 'cure', delta: 1 };
     return { type: 'miss', delta: 0 };
 }
+
+/** Dos teclas de elemento pulsadas con menos de este tiempo (ms) de diferencia se han pulsado «a la vez». */
+const CHORD_MS = 120;
 
 class InputSystem {
     #settings;
@@ -92,20 +95,24 @@ class InputSystem {
 
     /**
      * Carga un elemento. Queda cargado hasta que se lanza el hechizo: no se apaga solo.
-     * · Si los que había siguen pulsados, o se soltaron hace menos que la ventana de combinación, se suma a ellos (dúo).
-     * · Si ya ha pasado ese tiempo, los sustituye.
-     * · Si ya estaba cargado, se queda él solo: así se corrige un elemento pulsado por error.
-     * minWindow: ventana mínima (ms) para sumarle otro; los gestos táctiles son más lentos que las teclas.
+     * · Un dúo es pulsar dos elementos a la vez: se suma a los que siguen pulsados (o se acaban de pulsar).
+     * · Si los que había ya se soltaron, los sustituye: se queda el último elemento pulsado.
+     * · Excepción: los toques seguidos se suman dentro de una ventana de tiempo donde no se pueden pulsar
+     *   dos a la vez (la pantalla táctil, con minWindow) o para quien lo activa en Opciones porque no puede
+     *   pulsar dos teclas a la vez (comboWindow; 0 = desactivado). En ese caso, pulsar otra vez un elemento
+     *   ya cargado lo deja solo.
+     * minWindow: ventana mínima (ms) para sumarle otro toque.
      */
     armElement(elId, fromKey = false, minWindow = 0) {
         if (!elId) return;
-        const now = performance.now(), win = this.#settings.comboWindow;
+        const now = performance.now(), win = this.#settings.comboWindow || 0;
         const again = this.#armed.has(elId);
         for (const [id, a] of [...this.#armed]) {
-            if (id !== elId && !this.#held.has(id) && (again || now - a.since > win)) this.#armed.delete(id);
+            if (id === elId || this.#held.has(id) || now - a.pressed <= CHORD_MS) continue;   // pulsados a la vez
+            if (again || now - a.since >= win) this.#armed.delete(id);
         }
         // Los que ya estaban de antes (no los de este mismo acorde) se dicen al manejador para que suenen también.
-        const before = this.armedNow().filter(id => id !== elId && now - (this.#armed.get(id)?.pressed ?? 0) > 150);
+        const before = this.armedNow().filter(id => id !== elId && now - (this.#armed.get(id)?.pressed ?? 0) > CHORD_MS);
         if (fromKey) this.#held.add(elId);
         this.#armed.set(elId, { since: now + Math.max(0, minWindow - win), pressed: now });
         this.handler?.onElement?.(elId, before);

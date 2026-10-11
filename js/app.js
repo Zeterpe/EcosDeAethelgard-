@@ -477,8 +477,8 @@ const App = (() => {
         const k = input.scheme.spoken;
         return `Elementos: ${k.agua}, Agua. ${k.fuego}, Fuego. ${k.tierra}, Tierra. ${k.viento}, Viento. ` +
             `Pulsa el elemento y luego la flecha hacia el enemigo: el elemento queda cargado hasta que lanzas. ` +
-            `Si te equivocas, pulsa el que querías; al cargar oyes todos los que llevas, y si suenan dos y solo querías uno, pulsa otra vez ese. ` +
-            `Para un dúo, dos elementos a la vez y la flecha. ` +
+            `Si te equivocas, pulsa el que querías: se queda el último que pulses. ` +
+            `Para un dúo, pulsa las dos teclas de elemento a la vez y luego la flecha. ` +
             `Espacio repite el enemigo. Enter dice tu estado. H da una pista. V activa o desactiva los anuncios de enemigos. Escape pausa. ` +
             `Durante una narración, Enter pasa al párrafo siguiente y Escape la salta entera.`;
     }
@@ -1595,12 +1595,12 @@ const App = (() => {
             { t: 'Sonidos de posición', x: 'Izquierda y derecha suenan en cada oído, con un chasquido de madera. Arriba suena agudo y brillante, con una campanilla. Abajo suena grave y apagado, con un golpe sordo. En la Biblioteca puedes escuchar cada posición.' },
             { t: 'Vidas, rachas y puntos', x: 'Cada error te quita una vida: dirección equivocada, elemento ineficaz, curar al enemigo o dejar que se agote el tiempo. Cada cinco aciertos seguidos sube tu multiplicador de puntos, hasta por cuatro, y las rachas largas te devuelven vidas. Responder rápido da puntos extra: lo sabrás por un destello agudo después del golpe. Si caes, repites el nivel: nunca pierdes tu progreso.' },
             { t: 'Medallas', x: 'Cada nivel de la historia que superas te da una medalla: oro si no recibes ningún golpe, plata si recibes uno solo y bronce si lo superas. En Repetir niveles, en el menú principal, puedes volver a jugar cualquier nivel superado para mejorar tu medalla.' },
-            { t: 'Pantalla táctil', x: 'En móviles y tabletas puedes usar los botones de la pantalla o gestos sobre el campo de batalla. Toca con un dedo para el Agua, con dos para el Fuego, con tres para la Tierra y con cuatro para el Viento; después desliza un dedo hacia el enemigo para lanzar el hechizo. Para un dúo, haz los dos toques seguidos y luego desliza. Deslizar dos dedos repite el enemigo, y deslizar tres dedos pausa. Si usas VoiceOver o TalkBack, el lector se queda con los gestos: desactívalo mientras combates, que el juego tiene su propia voz.' },
+            { t: 'Pantalla táctil', x: 'En móviles y tabletas puedes usar los botones de la pantalla o gestos sobre el campo de batalla. Toca con un dedo para el Agua, con dos para el Fuego, con tres para la Tierra y con cuatro para el Viento; después desliza un dedo hacia el enemigo para lanzar el hechizo. Para un dúo, haz los dos toques seguidos y luego desliza; con los botones, toca los dos elementos seguidos y luego la flecha. Si tocas otra vez un elemento ya cargado, se queda solo ese. Deslizar dos dedos repite el enemigo, y deslizar tres dedos pausa. Si usas VoiceOver o TalkBack, el lector se queda con los gestos: desactívalo mientras combates, que el juego tiene su propia voz.' },
             { t: 'Niveles especiales', x: 'Frenesí: los enemigos llegan más rápido. Niebla: no se anuncia la posición, solo la oyes. Élite: solo criaturas de dos elementos. En los niveles 15 y 25 acecha la Sombra Imitadora: imita a otras criaturas y debes responderle como a la criatura que imita.' },
             { t: 'Criaturas raras', x: 'A partir del nivel 22 aparecen, de una en una, tres criaturas que piden escuchar de otra manera, y la voz no dice por dónde vienen. El Fuego Errante se mueve antes de atacar: apunta a donde termina su llama. Los Gemelos de Piedra suenan a la vez en dos posiciones: alcanza a los dos, uno detrás de otro, en el mismo turno. El Susurro de Bruma suena muy bajo y una sola vez. En dificultad Aprendiz y con audio mono, la voz sí anuncia sus posiciones.' },
             { t: 'Guardianes', x: 'Cada guardián tiene una mecánica propia. Ignar lanza brasas: apágalas con Agua. El Leviatán se desplaza antes de atacar: apunta a donde termina. Zael lanza ecos falsos y lejanos: apunta al grito cercano. Rok alza un escudo de piedra: cuando lo oigas, no ataques. El Avatar del Silencio cambia de elemento sin parar.' },
             { t: 'Modos de juego', x: 'Historia: treinta niveles, cuatro rutas con sus guardianes y un enemigo final. Arena: oleadas infinitas con récord. Práctica libre: sin vidas ni puntos. Entrenamiento: aprende paso a paso.' },
-            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, la ventana de combinación, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. La historia tiene su propia velocidad, aparte de la del resto del juego. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
+            { t: 'Accesibilidad', x: `En Opciones puedes cambiar la dificultad, la velocidad, el volumen y la voz, cuánto se anuncia de cada enemigo, si los dúos se pueden hacer con teclas seguidas, el esquema de teclas para zurdos, el audio mono, si usas lector de pantalla y la voz de la historia: narradores grabados, con una voz para cada personaje, o la voz del sistema. La historia tiene su propia velocidad, aparte de la del resto del juego. Con el esquema zurdo, los elementos son ${KEY_SCHEMES.zurdo.spoken.agua}, ${KEY_SCHEMES.zurdo.spoken.fuego}, ${KEY_SCHEMES.zurdo.spoken.tierra} y ${KEY_SCHEMES.zurdo.spoken.viento}, y las direcciones W, A, S y D. Ahora usas: tecla ${k.agua} para el Agua.` },
         ];
     }
 
@@ -1647,9 +1647,11 @@ const App = (() => {
                 }[v]),
             },
             {
-                id: 'comboWindow', label: 'Ventana de combinación', type: 'choice', values: [600, 1000, 1500, 2500],
-                labels: { 600: 'Corta, 0,6 segundos', 1000: 'Normal, 1 segundo', 1500: 'Amplia, 1,5 segundos', 2500: 'Muy amplia, 2,5 segundos' },
-                desc: 'Para un dúo puedes pulsar los dos elementos a la vez o uno detrás de otro: este es el tiempo que tienes para pulsar el segundo. Amplíala si te cuesta pulsar varias teclas a la vez.',
+                id: 'comboWindow', label: 'Dúos con teclas seguidas', type: 'choice', values: [0, 1000, 1500, 2500],
+                labels: { 0: 'No, solo a la vez', 1000: 'Sí, en 1 segundo', 1500: 'Sí, en 1,5 segundos', 2500: 'Sí, en 2,5 segundos' },
+                desc: v => v
+                    ? 'Para quien no puede pulsar dos teclas a la vez: un elemento se suma al anterior si lo pulsas dentro de ese tiempo. Para quedarte con uno solo, púlsalo otra vez.'
+                    : 'Un dúo se forma solo al pulsar las dos teclas de elemento a la vez. Si pulsas un elemento y después otro, se queda el último.',
             },
             { id: 'keyScheme', label: 'Esquema de teclas', type: 'choice', values: ['clasico', 'zurdo'], labels: { clasico: KEY_SCHEMES.clasico.name, zurdo: KEY_SCHEMES.zurdo.name } },
             { id: 'ticks', label: 'Tic-tac del tiempo', type: 'bool', desc: 'Avisa con un tic-tac cuando se acaba el tiempo para responder.' },
@@ -1851,7 +1853,7 @@ const App = (() => {
             b.addEventListener('click', () => {
                 unlock();
                 if (!combat.active && !tutorial.running) return;
-                if (b.dataset.el) input.armElement(b.dataset.el);
+                if (b.dataset.el) input.armElement(b.dataset.el, false, 1000);   // en pantalla no se pueden pulsar dos a la vez
                 else if (b.dataset.dir) input.fireDirection(b.dataset.dir);
             });
         });
