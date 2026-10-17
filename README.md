@@ -4,7 +4,7 @@ Un juego de rol de acción hecho de sonido, pensado para personas ciegas y jugab
 
 Las criaturas del Silencio te atacan desde cuatro posiciones. Escucha su sonido, reconoce a la criatura y respóndele con el elemento que la vence, en su dirección.
 
-https://zeterpe.github.io/EcosDeAethelgard-/
+# Jugar: https://zeterpe.github.io/EcosDeAethelgard-/
 
 ## Cómo jugar
 
